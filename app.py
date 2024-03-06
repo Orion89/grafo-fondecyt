@@ -31,7 +31,7 @@ df = pd.read_csv('./data/proyectos_fondecyt_2012-2019.csv')
 app = Dash(
     __name__,
     title='Conexiones en los proyectos Fondecyt',
-    external_stylesheets=[dbc.themes.FLATLY, stylesheets.VIS_NETWORK_STYLESHEET],
+    external_stylesheets=[dbc.themes.FLATLY, stylesheets.VIS_NETWORK_STYLESHEET, dbc.icons.BOOTSTRAP],
     meta_tags=[
         {'name': 'viewport',
         'content': 'width=device-width, initial-scale=1.0'}
@@ -56,16 +56,48 @@ app.layout = dbc.Container(
             [
                 dbc.Col(
                     [
-                        html.H2("Grafo"),
+                        html.P("Seleccionar la universiadad y año de interés en la parte inferior del grafo", className='mb-0'),
+                        html.P("Puedes obtener más información al pasar el puntero sobre cada nodo o arrastrarlos manteniendo presionado y moviendo algún nodo en particular.", className='mb-0'),
+                        html.P("También puedes hacer zoom usando el scrool del ratón.")
+                    ],
+                    width={
+                        'size': 5,
+                        'offset': 1
+                    }
+                ),
+                dbc.Col(
+                    [
+                        dbc.Card(
+                            [
+                                dbc.CardImg(src='./static/Logo-Fondecyt-1.png', top=True, style={'max-width': '250px'}),
+                                dbc.CardBody(
+                                    [
+                                      html.H3("Grafo de conocimiento proyectos Fondecyt", className='card-title'),
+                                      html.P("Conexiones entre investigadores, proyectos, áreas de estudio y universidades", className='card-text')  
+                                    ]
+                                )
+                            ]
+                        )
+                    ]
+                )    
+            ],
+            class_name='mb-2 mt-2'
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
                         dbc.Container(
                             # network,
-                            id='network-1'
+                            id='network-1',
+                            class_name='border-2 border-top border-bottom border-primary'
                         )
                     ],
                     width=12,
                     class_name='mb-1'
                 )
-            ]
+            ],
+            class_name='mb-2 mt-1'
         ),
         dbc.Row(
             [
@@ -98,8 +130,49 @@ app.layout = dbc.Container(
                     )
                 )
             ]
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        # html.Div(id='user-info', className='invisible m-0'),
+                        dbc.Card(
+                            [
+                                dbc.CardFooter(
+                                    [
+                                        html.P([
+                                            html.A(
+                                                children=[html.I(className="bi bi-github")],
+                                                disable_n_clicks=True,
+                                                href='https://github.com/Orion89',
+                                                title="GitHub profile"
+                                            ),
+                                            " ",
+                                            html.A(
+                                                children=[html.I(className="bi bi-linkedin")],
+                                                disable_n_clicks=True,
+                                                href='https://www.linkedin.com/in/leonardo-molina-v-68a601183/',
+                                                title="LinkedIn profile"
+                                            ),
+                                            " 2023 Leonardo Molina V."
+                                            ]
+                                        ),
+                                        html.P('Proyecto académico. El autor no se hace responsable del mal uso del contenido.')
+                                    ]
+                                    
+                                )
+                            ],
+                        )
+                    ],
+                    class_name='mt-4',
+                    width={'size': 12}
+                )
+            ],
+            align='center',
+            class_name='text-end'
         )
-    ]
+    ],
+    fluid=True
 )
 
 @app.callback(
