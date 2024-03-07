@@ -1,6 +1,8 @@
 from ast import literal_eval
 import json
 
+import plotly.graph_objects as go
+import plotly.express as px
 from dash import Dash, dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 from dashvis import DashNetwork, stylesheets
@@ -63,7 +65,8 @@ app.layout = dbc.Container(
                     width={
                         'size': 5,
                         'offset': 1
-                    }
+                    },
+                    align="end"
                 ),
                 dbc.Col(
                     [
@@ -115,7 +118,7 @@ app.layout = dbc.Container(
                     ]
                 ),
                     width={
-                        'size': 4,
+                        'size': 5,
                         'offset': 1
                     }
                 ),
@@ -125,13 +128,48 @@ app.layout = dbc.Container(
                         max=int(df['año_concurso'].max()),
                         step=None,
                         value=2019,
+                        included=False,
                         marks={int(year): str(year) for year in df['año_concurso'].unique()},
                         id='slider-1'
-                    )
+                    ),
+                    width={
+                        'size': 5
+                    }
                 )
-            ]
+            ],
+            justify='around',
+            class_name='mb-3'
         ),
         dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        html.Div(
+                            [
+                                html.H4(id='title-treemap-1', className='mb-1 text-center text-primary'),
+                                dcc.Graph(id='treemap-1', className='mt-0')
+                            ]
+                        )
+                    ],
+                    width={'size': 6},
+                    align="center"
+                ),
+                dbc.Col(
+                    [
+                        html.Div(
+                            [
+                                html.H4('Proporción por tipo de proyecto', className='mb-1 text-center text-primary'),
+                                dcc.Graph(id='donut-1')
+                            ]
+                        )
+                    ],
+                    width={'size': 6}
+                )
+            ],
+            class_name='mt-3 mb-1',
+            justify='evenly'
+        ),
+        dbc.Row( # FOOTER
             [
                 dbc.Col(
                     [
@@ -170,7 +208,7 @@ app.layout = dbc.Container(
             ],
             align='center',
             class_name='text-end'
-        )
+        ),
     ],
     fluid=True
 )
@@ -195,6 +233,71 @@ def create_network(u_name, year):
     )
     return network
 
+
+@app.callback(
+    Output('treemap-1', 'figure'),
+    Output('title-treemap-1', 'children'),
+    Input('dropdown-1', 'value')
+)
+def update_treemap_1(u_name):
+    df_filtered = (df[df.institucion_patrocinante == u_name]['area_estudio']
+               .value_counts()
+               .to_frame()
+               .reset_index()
+               .rename({'count': 'frecuencia'}, axis=1)
+               .copy())
+    print(df_filtered.columns)
+    
+    fig = px.treemap(
+        df_filtered,
+        path=[px.Constant('Áreas'), 'area_estudio'],
+        values='frecuencia',
+        color_discrete_sequence=px.colors.sequential.Blues_r
+    )
+    fig.update_traces(root_color="lightgrey")
+    fig.update_traces(
+        textinfo='label+percent entry',
+        insidetextfont=dict(
+            # color='black',
+            family='Opens Sans, Arial',
+            size=16
+        )
+    )
+    fig.update_layout(margin=dict(t=20, l=25, r=25, b=25))
+    
+    title = f'Mapa de las Prioridades de Investigación de la {u_name}'
+    
+    return fig, title
+
+
+@app.callback(
+    Output('donut-1', 'figure'),
+    Input('dropdown-1', 'value')
+)
+def update_donut_1(u_name):
+    df_filtered = (df[df.institucion_patrocinante == u_name]['instrumento']
+               .value_counts()
+               .to_frame()
+               .reset_index()
+               .rename({'instrumento': 'Tipo de instrumento','count': 'frecuencia'}, axis=1)
+               .copy())
+    
+    fig = px.pie(
+        data_frame=df_filtered,
+        names='Tipo de instrumento',
+        values='frecuencia',
+        color_discrete_sequence=px.colors.sequential.Blues_r,
+        hole=0.5
+    )
+    fig.update_traces(
+        textposition='outside',
+        textinfo='percent+label',
+        texttemplate="%{label}<br>%{percent:.1%}",
+        textfont={'size':16}
+    )
+    fig.update_layout(showlegend=False)
+
+    return fig
 
 if __name__ == "__main__":
     app.run_server(debug=True, port="9000")
