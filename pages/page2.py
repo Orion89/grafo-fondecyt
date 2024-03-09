@@ -5,7 +5,7 @@ import networkx as nx
 from pyvis.network import Network
 
 import dash
-from dash import html, dcc
+from dash import html, dcc, callback, Input, Output, no_update
 from dashvis import DashNetwork
 import dash_bootstrap_components as dbc
 
@@ -34,13 +34,26 @@ researchers_network = DashNetwork(
             'nodes': literal_eval(graph_data['nodes']),
             'edges': literal_eval(graph_data['edges'])
     },
-    # enableHciEvents=False,
+    # enableHciEvents=True,
     # enablePhysicsEvents=True,
-    # enableOtherEvents=False
+    # enableOtherEvents=True
+)
+
+modal = dbc.Modal(
+    [
+        dbc.ModalHeader("Cargando visualización..."),
+        dbc.ModalBody("Espere un momento mientras se carga el grafo. El proceso puede tardar unos minutos."),
+        dbc.ModalFooter(
+            dbc.Button("Cerrar", id="modal-close", className="ml-auto", n_clicks=0)
+        ),
+    ],
+    id="modal-1",
+    is_open=True,
 )
     
 layout = html.Div(
     [
+        modal,
         dbc.Row(
         [
             dbc.Col(
@@ -100,6 +113,45 @@ layout = html.Div(
                 width={'size': 10}
             )
         ]
+    ),
+    dbc.Row(
+        [
+            dbc.Col(
+                [
+                    html.Div(
+                        id='select-node-event-1'
+                    )
+                ],
+                width={'size': 6}
+            )
+        ],
+        class_name='mt-2'
     )
     ]
 )
+
+
+@callback(
+    Output('select-node-event-1', 'children'),
+    Input('network-2', 'selectNode')
+)
+def node_select_event(selected_node):
+    if selected_node:
+        import pprint
+    
+        return '''
+        Select node event produced:
+        {}
+        '''.format(pprint.pformat(selected_node, indent=4, width=200, compact=False, sort_dicts=True))
+    else:
+        return 'No se ha seleccionado un nodo'
+    
+
+@callback(
+    Output("modal-1", "is_open"),
+    [Input("modal-close", "n_clicks")],
+)
+def close_modal(n_clicks):
+    if n_clicks > 0:
+        return False
+    return True
