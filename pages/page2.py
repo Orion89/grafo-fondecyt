@@ -9,7 +9,7 @@ from dash import html, dcc, callback, Input, Output, no_update
 from dashvis import DashNetwork
 import dash_bootstrap_components as dbc
 
-from data_process import nx_to_pyvis
+from data_process import nx_to_pyvis_process
 from network_options import options
 
 dash.register_page(
@@ -19,10 +19,10 @@ dash.register_page(
     description='Grafo de co-ocurrencias de investigadores en proyectos Fondecyt'
 )
 
-with open('./data/g_researches_nx.pkl', 'rb') as in_file:
+with open('./data/g_researches_nx_v4.pkl', 'rb') as in_file:
     nx_graph = pickle.load(in_file)
     
-graph_data = nx_to_pyvis(nx_graph=nx_graph)
+graph_data = nx_to_pyvis_process(nx_graph=nx_graph)
 
 researchers_network = DashNetwork(
     id='network-2',
@@ -30,19 +30,26 @@ researchers_network = DashNetwork(
         'height': graph_data['height'],
         'width': graph_data['width']
     },
+    options=options.default_options_,
     data={
             'nodes': literal_eval(graph_data['nodes']),
             'edges': literal_eval(graph_data['edges'])
     },
-    # enableHciEvents=True,
-    # enablePhysicsEvents=True,
-    # enableOtherEvents=True
+    enableHciEvents=True,
+    enablePhysicsEvents=False,
+    enableOtherEvents=False
 )
+
 
 modal = dbc.Modal(
     [
-        dbc.ModalHeader("Cargando visualización..."),
-        dbc.ModalBody("Espere un momento mientras se carga el grafo. El proceso puede tardar unos minutos."),
+        dbc.ModalHeader(html.P("Cargando visualización...", className='fw-bold mb-0')),
+        dbc.ModalBody(
+            [
+                html.P("El proceso de carga del grafo puede tardar unos minutos."),
+                html.P('Puedes cerrar este cuadro.')
+            ]
+            ),
         dbc.ModalFooter(
             dbc.Button("Cerrar", id="modal-close", className="ml-auto", n_clicks=0)
         ),

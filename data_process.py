@@ -30,6 +30,44 @@ def nx_to_pyvis(nx_graph:nx.Graph=None):
     return G_data
 
 
+def nx_to_pyvis_process(nx_graph:nx.Graph=None):
+    
+    G_pyvis = Network(
+        height="800px",
+        width="100%",
+        directed=False,
+        bgcolor="#222222",
+        font_color="#2c3e50"
+    )
+    
+    node_ids = dict(zip(list(nx_graph.nodes()), range(1, nx_graph.number_of_nodes() + 1)))
+    for node in nx_graph.nodes(data=True):
+        G_pyvis.add_node(
+            node_ids[node[0]],
+            label=node[1]['label'],
+            title=node[1]['title']
+        )
+    for edge in nx_graph.edges(data=True):
+        G_pyvis.add_edge(
+            node_ids[edge[0]],
+            node_ids[edge[1]],
+            weight=edge[2]['weight'],
+            # title=edge[2]['title']
+        )
+    G_pyvis.show_buttons(filter_=['physics', "layout"])
+    G_pyvis.barnes_hut(
+        gravity=-4_000,
+        central_gravity=0,
+        spring_length=200,
+        spring_strength=0.009,
+        damping=0.025,
+        overlap=0.2
+    )
+    G_data = json.loads(G_pyvis.to_json())
+    
+    return G_data
+
+
 
 def filter_kgraph_nx_to_pyvis(df:pd.DataFrame,
                     year:int=None,
@@ -62,7 +100,7 @@ def filter_kgraph_nx_to_pyvis(df:pd.DataFrame,
             folio,
             label=f'{folio}',
             group='Proyectos',
-            title=f'Nota: {str(calification)}<br>Tipo: {str(project_type)}'
+            title=f'Nota: {str(calification)}\nTipo: {str(project_type)}'
         )
         G.add_node(str(year), label=f'{year}', group='Año', title=f'Año proyectos {str(year)}')
         G.add_node(area, label=f'{area}', group='Areas de estudio')

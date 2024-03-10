@@ -58,11 +58,11 @@ interaction_ = {
     'hover': True,
     'hoverConnectedEdges': True,
     # 'multiselect': True,
-    'keyboard': {
-        'enabled': True,
-        'bindToWindow': False,
-        'autoFocus': True,
-    },
+    # 'keyboard': {
+    #     'enabled': True,
+    #     'bindToWindow': False,
+    #     'autoFocus': True,
+    # },
     # 'navigationButtons': True,
 }
 
