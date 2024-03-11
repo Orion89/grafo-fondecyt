@@ -65,7 +65,7 @@ def nx_to_pyvis_process(nx_graph:nx.Graph=None):
     )
     G_data = json.loads(G_pyvis.to_json())
     
-    return G_data
+    return G_data, G_pyvis
 
 
 
