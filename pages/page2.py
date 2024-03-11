@@ -121,7 +121,8 @@ layout = html.Div(
                         color='info'
                     )
                 ],
-                width={'size': 10}
+                width={'size': 10},
+                className='border-2 border-top border-bottom border-primary'
             )
         ]
     ),
@@ -129,11 +130,27 @@ layout = html.Div(
         [
             dbc.Col(
                 [
+                    html.H5(
+                        'Métricas de Centralidad de Investigadores Fondecyt',
+                        className='text-primary'
+                    ),
                     dcc.Graph(
                         id='nodes-comparison-1'
                     ),
                     html.Div(
                         id='select-node-event-1'
+                    )
+                ],
+                width={'size': 6}
+            ),
+            dbc.Col(
+                [
+                    html.H5(
+                        'Distribución del número de conexiones',
+                        className='text-primary'
+                    ),
+                    dcc.Graph(
+                        id='degree-histogram-1'
                     )
                 ],
                 width={'size': 6}
@@ -188,9 +205,23 @@ def node_comparison(selected_node_dict):
         y=node_statistics.index[:-2],
         name='Medidas de centralidad',
         marker=dict(
-            color='rgba(156, 165, 196, 0.90)',
+            color='#3394D5',
+            line_color='#3394D5',
+            symbol='diamond',
+            line_width=1.0,
+            size=18
+        ),
+        mode='markers'
+    )
+    
+    points_descriptive = go.Scatter(
+        x=[0.001306, 0.000719, 0.003663972, 0.000370],
+        y=node_statistics.index[:-2],
+        name='Promedios',
+        marker=dict(
+            color='#91A1A2',
             line_color='rgba(156, 165, 196, 1.0)',
-            symbol='circle',
+            symbol="line-ns",
             line_width=1.0,
             size=18
         ),
@@ -198,10 +229,12 @@ def node_comparison(selected_node_dict):
     )
     
     fig.add_trace(points_graph)
+    fig.add_trace(points_descriptive)
     fig.update_layout(
         xaxis=dict(
-            showgrid=False,
+            showgrid=True,
             showline=True,
+            #range=[0.0, 0.3],
             linecolor='rgb(102, 102, 102)',
             tickfont_color='rgb(102, 102, 102)',
             showticklabels=True,
@@ -209,13 +242,17 @@ def node_comparison(selected_node_dict):
             ticks='outside',
             tickcolor='rgb(102, 102, 102)',
     ),
-        margin=dict(l=140, r=40, b=50, t=80),
+        yaxis=dict(
+            showgrid=True,
+            showline=False
+        ),
+        margin=dict(l=40, r=40, b=50, t=40),
     # legend=dict(
     #     font_size=10,
     #     yanchor='middle',
     #     xanchor='right',
     # ),
-        # width=800,
+        width=800,
         # height=600,
         paper_bgcolor='white',
         plot_bgcolor='white',
@@ -224,4 +261,50 @@ def node_comparison(selected_node_dict):
     
     return fig, 'visible'
 
+
+@callback(
+    Output('degree-histogram-1', 'figure'),
+    Output('degree-histogram-1', 'className'),
+    Input('network-2', 'selectNode')
+)
+def degree_histogram(selected_node_dict):
+    if not selected_node_dict:
+        return no_update, 'invisible'
     
+    node_selected_id = selected_node_dict['nodes'][0]
+    node_label = G_pyvis.node_map[node_selected_id]['label']
+    node_statistics = df_centralities_measures.loc[node_label].copy()
+    node_degree = int(node_statistics['degree'])
+    
+    colors = ['#3394D5' if degree == node_degree else '#E6E9EA' for degree in range(0, 30 + 1)]
+    
+    fig = go.Figure()
+    hist_1 = go.Histogram(
+    x= df_centralities_measures['degree'].values,
+    xbins=dict(
+        start=0,
+        end=30,
+        size=1
+    ),
+    marker=dict(
+            color=colors
+        ),
+    histfunc="count"
+    )
+    fig.add_trace(hist_1)
+    fig.update_layout(
+        # title_text='Degree', # title of plot
+        xaxis_title_text='Degree', # xaxis label
+        yaxis_title_text='Count', # yaxis label
+        bargap=0.05, # gap between bars of adjacent location coordinates
+        xaxis=dict(
+            showgrid=False
+        ),
+        yaxis=dict(
+            showgrid=False
+        ),
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        )
+    
+    return fig, 'visible'
