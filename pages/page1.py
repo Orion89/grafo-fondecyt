@@ -67,7 +67,7 @@ layout = html.Div(
                             html.Div(
                                 # network,
                                 id='network-1',
-                                className='border-2 border-top border-bottom border-primary'
+                                className='border-2 border-top border-primary'
                             ),
                             color='info'
                         )
@@ -76,7 +76,7 @@ layout = html.Div(
                     class_name='mb-1'
                 )
             ],
-            class_name='mb-2 mt-1'
+            class_name='mb-3 mt-1'
         ),
         dbc.Row(
             [
@@ -96,7 +96,8 @@ layout = html.Div(
                     width={
                         'size': 5,
                         'offset': 1
-                    }
+                    },
+                    class_name='mb-3'
                 ),
                 dbc.Col(
                     [
@@ -112,11 +113,12 @@ layout = html.Div(
                     ],
                     width={
                         'size': 5
-                    }
+                    },
+                    class_name='mb-3'
                 )
             ],
             justify='around',
-            class_name='mb-3'
+            class_name='mb-3 border-2 border-bottom border-primary '
         ),
         dbc.Row(
             [
@@ -125,7 +127,7 @@ layout = html.Div(
                         html.Div(
                             [
                                 html.H4(id='title-treemap-1', className='mb-1 text-center text-primary'),
-                                dcc.Graph(id='treemap-1', className='mt-0')
+                                dcc.Graph(id='treemap-1', className='mt-0', config={'displayModeBar': False})
                             ]
                         )
                     ],
@@ -137,7 +139,7 @@ layout = html.Div(
                         html.Div(
                             [
                                 html.H4('Proporción por tipo de proyecto', className='mb-1 text-center text-primary'),
-                                dcc.Graph(id='donut-1')
+                                dcc.Graph(id='donut-1', config={'displayModeBar': False})
                             ]
                         )
                     ],

@@ -135,7 +135,8 @@ layout = html.Div(
                         className='text-primary'
                     ),
                     dcc.Graph(
-                        id='nodes-comparison-1'
+                        id='nodes-comparison-1',
+                        config={'displayModeBar': False}
                     ),
                     html.Div(
                         id='select-node-event-1'
@@ -150,7 +151,8 @@ layout = html.Div(
                         className='text-primary'
                     ),
                     dcc.Graph(
-                        id='degree-histogram-1'
+                        id='degree-histogram-1',
+                        config={'displayModeBar': False}
                     )
                 ],
                 width={'size': 6}
@@ -199,31 +201,38 @@ def node_comparison(selected_node_dict):
     node_label = G_pyvis.node_map[node_selected_id]['label']
     node_statistics = df_centralities_measures.loc[node_label]
     
+    centralities_labels = {
+        'DGC': 'Degree centrality',
+        'BTC': 'Betweenness centrality',
+        'EVC': 'Eigenvector centrality',
+        'PRC': 'Page rank'
+    }
+    
     fig = go.Figure()
     points_graph = go.Scatter(
         x=node_statistics.values[:-2],
-        y=node_statistics.index[:-2],
+        y=[centralities_labels[abr].replace(' ', '<br>') for abr in node_statistics.index[:-2]], #node_statistics.index[:-2],
         name='Medidas de centralidad',
         marker=dict(
             color='#3394D5',
             line_color='#3394D5',
             symbol='diamond',
             line_width=1.0,
-            size=18
+            size=17
         ),
         mode='markers'
     )
     
     points_descriptive = go.Scatter(
         x=[0.001306, 0.000719, 0.003663972, 0.000370],
-        y=node_statistics.index[:-2],
+        y=[centralities_labels[abr].replace(' ', '<br>') for abr in node_statistics.index[:-2]], # node_statistics.index[:-2],
         name='Promedios',
         marker=dict(
             color='#91A1A2',
             line_color='rgba(156, 165, 196, 1.0)',
             symbol="line-ns",
-            line_width=1.0,
-            size=18
+            line_width=2.5,
+            size=19
         ),
         mode='markers'
     )
@@ -241,6 +250,7 @@ def node_comparison(selected_node_dict):
             # dtick=10,
             ticks='outside',
             tickcolor='rgb(102, 102, 102)',
+            ticktext=[centralities_labels[abr].replace(' ', '<br>') for abr in node_statistics.index[:-2]]
     ),
         yaxis=dict(
             showgrid=True,
