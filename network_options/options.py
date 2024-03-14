@@ -47,11 +47,12 @@ manipulation_ = {
 #       nodeData.label = 'hello world';
 #       callback(nodeData);
 # }""",
-    # 'addEdge': True,
-    # 'editNode': None,
-    # 'editEdge': True,
-    # 'deleteNode': True,
-    # 'deleteEdge': True,
+    'addEdge': None,
+    'addNode': None,
+    'editNode': None,
+    'editEdge': None,
+    'deleteNode': None,
+    'deleteEdge': None,
 }
 
 interaction_ = {

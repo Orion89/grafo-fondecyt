@@ -21,7 +21,7 @@ dash.register_page(
     description='Grafo de co-ocurrencias de investigadores en proyectos Fondecyt'
 )
 
-with open('./data/g_researches_nx_v4.pkl', 'rb') as in_file:
+with open('./data/g_researches_nx_v5.pkl', 'rb') as in_file:
     nx_graph = pickle.load(in_file)
     
 graph_data, G_pyvis = nx_to_pyvis_process(nx_graph=nx_graph)
@@ -44,6 +44,12 @@ researchers_network = DashNetwork(
     enableOtherEvents=False
 )
 
+n_components = nx.number_connected_components(nx_graph)
+n_nodes = nx_graph.number_of_nodes()
+n_edges = nx_graph.number_of_edges()
+avg_clustering = nx.average_clustering(nx_graph)
+degree_assortativity = nx.degree_assortativity_coefficient(nx_graph)
+density = nx.density(nx_graph)
 
 modal = dbc.Modal(
     [
@@ -104,6 +110,7 @@ layout = html.Div(
                                    html.H5('Redes de colaboración entre académicos', className='card-subtitle text-secondary'),
                                    html.Br(),
                                    html.P('Se estable una arista entre dos investigadores si han trabajado en el mismo proyecto. El grosor de la arista refleja el número de colaboraciones.', className='card-text text-info'),
+                                   html.P('El tamaño de cada nodo refleja el número de sus conexiones: Mientras más conexiones, mayor es el área de cada nodo.', className='card-text text-info'),
                                    html.P('Se consideran todos los años del data set en conjunto. No se dibujan los investigadores sin colaboraciones.', className='card-text text-info')
                                ]
                            )
@@ -127,12 +134,28 @@ layout = html.Div(
         ]
     ),
     dbc.Row(
+      [
+          dbc.Col(
+              [
+                  html.P(
+                      id='info-graph-1',
+                      className='text-secondary fs-6 p-0 lh-sm text-end'
+                  ),
+                  dcc.Interval(id='interval-1', interval=3000)
+              ],
+              width={'size': 11, 'offset': 1}
+          )
+      ],
+      class_name='mt-1 mb-3'  
+    ),
+    dbc.Row(
         [
             dbc.Col(
                 [
                     html.H5(
-                        'Métricas de Centralidad de Investigadores Fondecyt',
-                        className='text-primary'
+                        id='title-plot-1',
+                        children='Métricas de Centralidad de Investigadores Fondecyt',
+                        className='text-primary text-center'
                     ),
                     dcc.Graph(
                         id='nodes-comparison-1',
@@ -147,8 +170,9 @@ layout = html.Div(
             dbc.Col(
                 [
                     html.H5(
-                        'Distribución del número de conexiones',
-                        className='text-primary'
+                        id='title-plot-2',
+                        children=['Distribución del número de conexiones'],
+                        className='text-primary text-center'
                     ),
                     dcc.Graph(
                         id='degree-histogram-1',
@@ -158,7 +182,8 @@ layout = html.Div(
                 width={'size': 6}
             )
         ],
-        class_name='mt-2'
+        class_name='mt-2',
+        justify='evenly'
     )
     ]
 )
@@ -192,11 +217,13 @@ def close_modal(n_clicks):
 @callback(
     Output('nodes-comparison-1', 'figure'),
     Output('nodes-comparison-1', 'className'),
+    Output('title-plot-1', 'className'),
+    Output('title-plot-2', 'className'),
     Input('network-2', 'selectNode')
 )
 def node_comparison(selected_node_dict):
     if not selected_node_dict:
-        return no_update, 'invisible'
+        return no_update, 'invisible', 'invisible', 'invisible'
     node_selected_id = selected_node_dict['nodes'][0]
     node_label = G_pyvis.node_map[node_selected_id]['label']
     node_statistics = df_centralities_measures.loc[node_label]
@@ -269,7 +296,7 @@ def node_comparison(selected_node_dict):
         hovermode='closest',
     )
     
-    return fig, 'visible'
+    return fig, 'visible', 'visible', 'visible'
 
 
 @callback(
@@ -318,3 +345,18 @@ def degree_histogram(selected_node_dict):
         )
     
     return fig, 'visible'
+
+
+@callback(
+    Output('info-graph-1', 'children'),
+    Input('interval-1', 'n_intervals')
+)
+def show_graph_metrics(n_intervals):
+    if n_intervals:
+        info_text = f'''
+        num. subgrafos: {n_components}; num. nodos: {n_nodes}; num. aristas: {n_edges}; densidad: {density:.4f}; clustering promedio: {avg_clustering:.3f};
+        degree assortativity: {degree_assortativity:.3f}
+        '''
+        return info_text
+    else:
+        return no_update

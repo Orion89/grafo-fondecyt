@@ -45,7 +45,8 @@ def nx_to_pyvis_process(nx_graph:nx.Graph=None):
         G_pyvis.add_node(
             node_ids[node[0]],
             label=node[1]['label'],
-            title=node[1]['title']
+            title=node[1]['title'],
+            size=node[1]['size']
         )
     for edge in nx_graph.edges(data=True):
         G_pyvis.add_edge(
@@ -56,12 +57,12 @@ def nx_to_pyvis_process(nx_graph:nx.Graph=None):
         )
     G_pyvis.show_buttons(filter_=['physics', "layout"])
     G_pyvis.barnes_hut(
-        gravity=-4_000,
+        gravity=-5_500, # -3.500
         central_gravity=0,
-        spring_length=200,
+        spring_length=500, # 200
         spring_strength=0.009,
         damping=0.025,
-        overlap=0.2
+        overlap=0.98 # 0.2
     )
     G_data = json.loads(G_pyvis.to_json())
     
