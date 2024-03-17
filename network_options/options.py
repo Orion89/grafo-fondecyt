@@ -33,26 +33,35 @@ edges_ = {
     'smooth': {
         'type': "dynamic",
         'roundness': 0.5,
+        'avoidOverlap': 0.5
     }
 }
 
 physics_ = {
     'enabled': True,
+    'barnesHut': {
+        'gravitationalConstant': -5_000,
+        'centralGravity': 0,
+        'springLength': 500,
+        'springConstant': 0.009,
+        'damping': 0.025,
+        'avoidOverlap': 0.1
+    }
 }
 
 manipulation_ = {
-    'enabled': True,
-    'initiallyActive': True,
+    'enabled': False,
+    'initiallyActive': False,
 #     'addNode': """function(nodeData,callback) {
 #       nodeData.label = 'hello world';
 #       callback(nodeData);
 # }""",
-    'addEdge': None,
-    'addNode': None,
+    'addEdge': False,
+    'addNode': False,
     'editNode': None,
-    'editEdge': None,
-    'deleteNode': None,
-    'deleteEdge': None,
+    'editEdge': False,
+    'deleteNode': False,
+    'deleteEdge': False,
 }
 
 interaction_ = {

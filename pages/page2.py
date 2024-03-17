@@ -154,18 +154,19 @@ layout = html.Div(
                 [
                     html.H5(
                         id='title-plot-1',
-                        children='Métricas de Centralidad de Investigadores Fondecyt',
+                        children='Métricas de Centralidad del investigador seleccionado',
                         className='text-primary text-center'
                     ),
                     dcc.Graph(
                         id='nodes-comparison-1',
                         config={'displayModeBar': False}
                     ),
-                    html.Div(
-                        id='select-node-event-1'
-                    )
+                    # html.Div(
+                    #     id='select-node-event-1'
+                    # )
                 ],
-                width={'size': 6}
+                width={'size': 6},
+                class_name='ml-1 mr-3'
             ),
             dbc.Col(
                 [
@@ -179,7 +180,8 @@ layout = html.Div(
                         config={'displayModeBar': False}
                     )
                 ],
-                width={'size': 6}
+                width={'size': 6},
+                class_name='ml-3 mr-1'
             )
         ],
         class_name='mt-2',
@@ -189,20 +191,20 @@ layout = html.Div(
 )
 
 
-@callback(
-    Output('select-node-event-1', 'children'),
-    Input('network-2', 'selectNode')
-)
-def node_select_event(selected_node):
-    if selected_node:
-        import pprint
+# @callback(
+#     Output('select-node-event-1', 'children'),
+#     Input('network-2', 'selectNode')
+# )
+# def node_select_event(selected_node):
+#     if selected_node:
+#         import pprint
     
-        return '''
-        Select node event produced:
-        {}
-        '''.format(pprint.pformat(selected_node, indent=4, width=200, compact=False, sort_dicts=True))
-    else:
-        return 'No se ha seleccionado un nodo'
+#         return '''
+#         Select node event produced:
+#         {}
+#         '''.format(pprint.pformat(selected_node, indent=4, width=200, compact=False, sort_dicts=True))
+#     else:
+#         return 'No se ha seleccionado un nodo'
     
 
 @callback(
@@ -239,7 +241,7 @@ def node_comparison(selected_node_dict):
     points_graph = go.Scatter(
         x=node_statistics.values[:-2],
         y=[centralities_labels[abr].replace(' ', '<br>') for abr in node_statistics.index[:-2]], #node_statistics.index[:-2],
-        name='Medidas de centralidad',
+        name='Investigador',
         marker=dict(
             color='#3394D5',
             line_color='#3394D5',
@@ -253,7 +255,7 @@ def node_comparison(selected_node_dict):
     points_descriptive = go.Scatter(
         x=[0.001306, 0.000719, 0.003663972, 0.000370],
         y=[centralities_labels[abr].replace(' ', '<br>') for abr in node_statistics.index[:-2]], # node_statistics.index[:-2],
-        name='Promedios',
+        name='Promedio',
         marker=dict(
             color='#91A1A2',
             line_color='rgba(156, 165, 196, 1.0)',
@@ -281,14 +283,20 @@ def node_comparison(selected_node_dict):
     ),
         yaxis=dict(
             showgrid=True,
-            showline=False
+            showline=False,
+            tickfont=dict(
+                size=14
+            )
         ),
         margin=dict(l=40, r=40, b=50, t=40),
-    # legend=dict(
-    #     font_size=10,
-    #     yanchor='middle',
-    #     xanchor='right',
-    # ),
+    legend=dict(
+        orientation='h',
+        font_size=12,
+        yanchor='bottom',
+        y=-.2,
+        xanchor='right',
+        x=0.6
+    ),
         width=800,
         # height=600,
         paper_bgcolor='white',
