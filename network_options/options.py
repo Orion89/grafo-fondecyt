@@ -46,6 +46,9 @@ physics_ = {
         'springConstant': 0.009,
         'damping': 0.025,
         'avoidOverlap': 0.1
+    },
+    'stabilization': {
+        'iterations': 400
     }
 }
 

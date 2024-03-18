@@ -28,6 +28,10 @@ graph_data, G_pyvis = nx_to_pyvis_process(nx_graph=nx_graph)
 df_centralities_measures = pd.read_csv('./data/centralities_measures.csv')
 df_centralities_measures.set_index('nombre_completo', inplace=True)
 
+# zoom: https://github.com/almende/vis/issues/3012
+# zoom: https://stackoverflow.com/questions/27450311/set-zoom-level-in-vis-js
+# zoom: https://visjs.github.io/vis-network/docs/network/index.html?keywords=zoom
+# zoom: https://github.com/lewkoo/dashvis/blob/main/usage_examples/13_viewport_control.py
 researchers_network = DashNetwork(
     id='network-2',
     style={
@@ -86,7 +90,7 @@ layout = html.Div(
                 [
                     html.P(
                         '''
-                        Haz zoom para ver los nodos con mayor detalle. Dejando el puntero sobre un nodo se desplegarán las universidades patrocinantes.
+                        Haz zoom para ver los nombres de los investigadores. Dejando el puntero sobre un nodo se desplegarán las universidades patrocinantes.
                         Dejando el puntero sobre una arista se verán los folios de los proyectos en los cuales participaron los nodos unidos. 
                         ''',
                         className='text-secondary fs-6 p-0 lh-sm text-end'

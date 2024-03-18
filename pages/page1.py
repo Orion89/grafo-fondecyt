@@ -30,9 +30,9 @@ layout = html.Div(
             [
                 dbc.Col(
                     [
-                        html.P("Seleccionar la universiadad y año de interés en la parte inferior del grafo", className='mb-0 text-secondary'),
-                        html.P("Puedes obtener más información al pasar el puntero sobre cada nodo o arrastrarlos manteniendo presionado y moviendo algún nodo en particular.", className='mb-0 text-secondary'),
-                        html.P("También puedes hacer zoom usando el scrool del ratón.", className='text-secondary')
+                        html.P("Seleccionar la universiadad y año de en la parte inferior del grafo", className='mb-0 text-secondary'),
+                        html.P("Para más información, pasar el puntero sobre cada nodo.", className='mb-0 text-secondary'),
+                        html.P("Zoom usando el scrool del ratón.", className='text-secondary')
                     ],
                     width={
                         'size': 6,

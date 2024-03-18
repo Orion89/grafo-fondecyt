@@ -42,6 +42,8 @@ app = Dash(
     ]
 )
 
+server = app.server
+
 navbar = dbc.Nav(
     [
         dbc.NavItem(
@@ -49,7 +51,7 @@ navbar = dbc.Nav(
         ) for page in dash.page_registry.values()
     ],
     pills=True,
-    class_name='bg-light'
+    # class_name='bg-light'
 )
 
 app.layout = dbc.Container(
@@ -60,9 +62,33 @@ app.layout = dbc.Container(
                     [
                         navbar
                     ],
-                    width={'size': 12}
+                    width={'size': 7}
+                ),
+                dbc.Col(
+                    [
+                        html.P([
+                            html.A(
+                                children=[html.I(className="bi bi-github")],
+                                disable_n_clicks=True,
+                                href='https://github.com/Orion89',
+                                title="GitHub profile"
+                                    ),
+                                "   ",
+                                html.A(
+                                    children=[html.I(className="bi bi-linkedin")],
+                                    disable_n_clicks=True,
+                                    href='https://www.linkedin.com/in/leonardo-molina-v-68a601183/',
+                                    title="LinkedIn profile"
+                                    ),
+                                ]
+                            ),
+                    ],
+                    align="center",
+                    width={'size': 5},
+                    class_name='mt-2 text-end fs-4'
                 )
-            ]
+            ],
+            class_name='bg-light'
         ),
         # dbc.Row( # HEADER
         #     [
@@ -85,7 +111,7 @@ app.layout = dbc.Container(
                      dash.page_container   
                     ],
                     width={'size': 12}
-                ),
+                )
             ]
         ),
         dbc.Row( # FOOTER
@@ -104,7 +130,7 @@ app.layout = dbc.Container(
                                                 href='https://github.com/Orion89',
                                                 title="GitHub profile"
                                             ),
-                                            " ",
+                                            "  ",
                                             html.A(
                                                 children=[html.I(className="bi bi-linkedin")],
                                                 disable_n_clicks=True,
@@ -112,7 +138,8 @@ app.layout = dbc.Container(
                                                 title="LinkedIn profile"
                                             ),
                                             " 2023 Leonardo Molina V."
-                                            ]
+                                            ],
+                                            className='fs-5'
                                         ),
                                         html.P('Proyecto académico. El autor no se hace responsable del mal uso del contenido.')
                                     ]
@@ -134,4 +161,4 @@ app.layout = dbc.Container(
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port="9000")
+    app.run_server(debug=False, port="9000")

@@ -141,7 +141,7 @@ def filter_kgraph_nx_to_pyvis(df:pd.DataFrame,
         spring_length=500,
         spring_strength=0.009,
         damping=0.025,
-        overlap=0.6
+        overlap=0.5
     )
     G_data = json.loads(G_pyvis.to_json())
     return G_data
