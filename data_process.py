@@ -92,10 +92,12 @@ def filter_kgraph_nx_to_pyvis(df:pd.DataFrame,
     for folio, group in df.groupby('folioproy'):
         project_type = group['instrumento'].unique()[0]
         researches = group['nombre_completo'].unique().tolist()
+        grade = group['calidad'].unique()
         inst = group['institucion_patrocinante'].unique().tolist()
         year = group['año_concurso'].unique()[0]
         area = group['area_estudio'].unique()[0]
         calification = group['nota_proyecto'].unique()[0]
+        
         # Agregado de nodos y aristas
         G.add_node(
             folio,
@@ -113,7 +115,8 @@ def filter_kgraph_nx_to_pyvis(df:pd.DataFrame,
         G.add_edge(folio, area, label='area_estudio', title=f'Área de estudio: {area}')
         
         for researcher in researches:
-            G.add_node(researcher, label=f'{researcher}', group='Investigadores')
+            node_title = ' '.join([g.title() for g in grade])
+            G.add_node(researcher, label=f'{researcher}', title=node_title, group='Investigadores')
             G.add_edge(researcher, folio, label='investigador_de')
     
     if not k_layout:

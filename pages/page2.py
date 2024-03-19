@@ -158,7 +158,7 @@ layout = html.Div(
                 [
                     html.H5(
                         id='title-plot-1',
-                        children='Métricas de Centralidad del investigador seleccionado',
+                        # children='Métricas de Centralidad del investigador seleccionado',
                         className='text-primary text-center'
                     ),
                     dcc.Graph(
@@ -176,7 +176,7 @@ layout = html.Div(
                 [
                     html.H5(
                         id='title-plot-2',
-                        children=['Distribución del número de conexiones'],
+                        children=['Número de colaboraciones en contexto'],
                         className='text-primary text-center'
                     ),
                     dcc.Graph(
@@ -224,12 +224,13 @@ def close_modal(n_clicks):
     Output('nodes-comparison-1', 'figure'),
     Output('nodes-comparison-1', 'className'),
     Output('title-plot-1', 'className'),
+    Output('title-plot-1', 'children'),
     Output('title-plot-2', 'className'),
     Input('network-2', 'selectNode')
 )
 def node_comparison(selected_node_dict):
     if not selected_node_dict:
-        return no_update, 'invisible', 'invisible', 'invisible'
+        return no_update, 'invisible', 'invisible', '', 'invisible'
     node_selected_id = selected_node_dict['nodes'][0]
     node_label = G_pyvis.node_map[node_selected_id]['label']
     node_statistics = df_centralities_measures.loc[node_label]
@@ -308,7 +309,9 @@ def node_comparison(selected_node_dict):
         hovermode='closest',
     )
     
-    return fig, 'visible', 'visible', 'visible'
+    title = f'Métricas de Centralidad de {node_label.title()}'
+    
+    return fig, 'visible', 'visible', title, 'visible'
 
 
 @callback(

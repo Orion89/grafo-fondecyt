@@ -57,7 +57,7 @@ layout = html.Div(
                     width={'size': 6}
                 )    
             ],
-            class_name='mb-2 mt-3'
+            class_name='mb-3 mt-3'
         ),
         dbc.Row(
             [
@@ -203,7 +203,7 @@ def update_treemap_1(u_name):
     )
     fig.update_layout(margin=dict(t=20, l=25, r=25, b=25))
     
-    title = f'Mapa de las Prioridades de Investigación de la {u_name}'
+    title = f'Mapa de Prioridades de Investigación de la {u_name}'
     
     return fig, title
 
