@@ -1,5 +1,6 @@
 from ast import literal_eval
-import json
+# import json
+import os
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -161,4 +162,4 @@ app.layout = dbc.Container(
 
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port="9000")
+    app.run(debug=False, host=os.getenv("HOST", default='0.0.0.0'), port=os.getenv("PORT", default=9000))
