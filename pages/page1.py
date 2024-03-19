@@ -17,7 +17,7 @@ from data_process import filter_kgraph_nx_to_pyvis
 dash.register_page(
     __name__,
     path='/',
-    name='Grafo proyectos',
+    name='Knowledge graph Proyectos',
     title='Grafo de proyectos',
     description='Grafo de conocimiento de proyectos Fondecyt'
 )

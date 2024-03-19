@@ -48,7 +48,7 @@ server = app.server
 navbar = dbc.Nav(
     [
         dbc.NavItem(
-            dbc.NavLink(page['name'], href=page['path'])
+            dbc.NavLink(page['name'], href=page['path'], class_name='fw-bold')
         ) for page in dash.page_registry.values()
     ],
     pills=True,
@@ -162,4 +162,4 @@ app.layout = dbc.Container(
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host=os.getenv("HOST", default='0.0.0.0'), port=os.getenv("PORT", default='5000'))
+    app.run(debug=False, host=os.getenv("HOST", default='0.0.0.0'), port=os.getenv("PORT", default='8050'))
