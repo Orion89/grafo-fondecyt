@@ -1,5 +1,4 @@
 from ast import literal_eval
-import json
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -65,7 +64,6 @@ layout = html.Div(
                     [
                         dbc.Spinner(
                             html.Div(
-                                # network,
                                 id='network-1',
                                 className='border-2 border-top border-primary'
                             ),

@@ -1,36 +1,9 @@
-from ast import literal_eval
-# import json
 import os
 
-import plotly.graph_objects as go
-import plotly.express as px
 import dash
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, html
 import dash_bootstrap_components as dbc
-from dashvis import DashNetwork, stylesheets
-
-import networkx as nx
-import pandas as pd
-
-# from data_process import filter_kgraph_nx_to_pyvis
-
-df = pd.read_csv('./data/proyectos_fondecyt_2012-2019.csv')
-
-# with open('./data/kg_fondecyt_uai.json', 'r') as in_file:
-#     network_data = json.load(in_file)
-    
-
-# network = DashNetwork(
-#     id='g_fondecyt',
-#     style={
-#         'height': network_data['height'],
-#         'width': network_data['width']
-#     },
-#     data={
-#             'nodes': literal_eval(network_data['nodes']),
-#             'edges': literal_eval(network_data['edges'])
-#     }
-# )
+from dashvis import stylesheets
 
 app = Dash(
     __name__,
@@ -91,20 +64,6 @@ app.layout = dbc.Container(
             ],
             class_name='bg-light'
         ),
-        # dbc.Row( # HEADER
-        #     [
-        #         dbc.Col(
-        #         [
-        #             html.H1(
-        #                 "Conexiones en los proyectos Fondecyt",
-        #                 className="fw-bolder text-center"
-        #             )
-        #         ],
-        #         width=12
-        #         )
-        #     ],
-        #     class_name='m-2'
-        # ),
         dbc.Row(
             [
                 dbc.Col(
@@ -119,7 +78,6 @@ app.layout = dbc.Container(
             [
                 dbc.Col(
                     [
-                        # html.Div(id='user-info', className='invisible m-0'),
                         dbc.Card(
                             [
                                 dbc.CardFooter(

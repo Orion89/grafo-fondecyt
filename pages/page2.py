@@ -28,10 +28,6 @@ graph_data, G_pyvis = nx_to_pyvis_process(nx_graph=nx_graph)
 df_centralities_measures = pd.read_csv('./data/centralities_measures.csv')
 df_centralities_measures.set_index('nombre_completo', inplace=True)
 
-# zoom: https://github.com/almende/vis/issues/3012
-# zoom: https://stackoverflow.com/questions/27450311/set-zoom-level-in-vis-js
-# zoom: https://visjs.github.io/vis-network/docs/network/index.html?keywords=zoom
-# zoom: https://github.com/lewkoo/dashvis/blob/main/usage_examples/13_viewport_control.py
 researchers_network = DashNetwork(
     id='network-2',
     style={
@@ -158,16 +154,12 @@ layout = html.Div(
                 [
                     html.H5(
                         id='title-plot-1',
-                        # children='Métricas de Centralidad del investigador seleccionado',
                         className='text-primary text-center'
                     ),
                     dcc.Graph(
                         id='nodes-comparison-1',
                         config={'displayModeBar': False}
                     ),
-                    # html.Div(
-                    #     id='select-node-event-1'
-                    # )
                 ],
                 width={'size': 6},
                 class_name='ml-1 mr-3'
@@ -194,22 +186,6 @@ layout = html.Div(
     ]
 )
 
-
-# @callback(
-#     Output('select-node-event-1', 'children'),
-#     Input('network-2', 'selectNode')
-# )
-# def node_select_event(selected_node):
-#     if selected_node:
-#         import pprint
-    
-#         return '''
-#         Select node event produced:
-#         {}
-#         '''.format(pprint.pformat(selected_node, indent=4, width=200, compact=False, sort_dicts=True))
-#     else:
-#         return 'No se ha seleccionado un nodo'
-    
 
 @callback(
     Output("modal-1", "is_open"),
