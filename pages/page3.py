@@ -17,7 +17,6 @@ import dash
 from dash import dcc, html, callback, Input, Output, no_update
 import dash_bootstrap_components as dbc
 
-
 # ---------------------------------------------------------------------------
 # Registro de página
 # ---------------------------------------------------------------------------
@@ -96,10 +95,14 @@ df_proj = df_raw.drop_duplicates("folioproy").copy()
 # Normalizar nota_proyecto: 2012 usa escala 0–100, el resto usa 1–7
 mask_2012 = df_proj["año_concurso"] == 2012
 df_proj["nota_norm"] = df_proj["nota_proyecto"].copy()
-df_proj.loc[mask_2012, "nota_norm"] = 1 + (df_proj.loc[mask_2012, "nota_proyecto"] / 100) * 6
+df_proj.loc[mask_2012, "nota_norm"] = (
+    1 + (df_proj.loc[mask_2012, "nota_proyecto"] / 100) * 6
+)
 
 # Etiquetas legibles para áreas
-df_proj["area_label"] = df_proj["area_estudio"].map(AREA_LABELS).fillna(df_proj["area_estudio"])
+df_proj["area_label"] = (
+    df_proj["area_estudio"].map(AREA_LABELS).fillna(df_proj["area_estudio"])
+)
 
 # ---------------------------------------------------------------------------
 # Datos para gráfico 1: Hegemonía institucional
@@ -128,8 +131,8 @@ df_hegemony = (
     .sum()
     .reset_index()
 )
-df_hegemony["inst_short"] = df_hegemony["inst_group"].map(INST_SHORT).fillna(
-    df_hegemony["inst_group"]
+df_hegemony["inst_short"] = (
+    df_hegemony["inst_group"].map(INST_SHORT).fillna(df_hegemony["inst_group"])
 )
 
 # Orden de apilado: Otras al fondo, luego de menor a mayor
@@ -200,8 +203,7 @@ _inst_colors["Otras universidades"] = "#ced4da"
 _bump_palette = px.colors.qualitative.Alphabet
 _bump_areas_labels = df_bump["area_label"].unique().tolist()
 _bump_area_color: dict[str, str] = {
-    a: _bump_palette[i % len(_bump_palette)]
-    for i, a in enumerate(_bump_areas_labels)
+    a: _bump_palette[i % len(_bump_palette)] for i, a in enumerate(_bump_areas_labels)
 }
 _BUMP_HIGHLIGHTED = {
     "Cs. Jurídicas y Políticas",
@@ -239,15 +241,203 @@ def _base_layout(**kwargs) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Construcción de figuras
+# Helpers de datos y figuras de la sección 3
 # ---------------------------------------------------------------------------
+
+def _blue_shade(val: float, med_min: float, med_max: float) -> str:
+    """Devuelve un color RGB en degradado azul según la posición de val en [med_min, med_max]."""
+    t = (val - med_min) / (med_max - med_min) if med_max > med_min else 0.5
+    r = int(30 + (1 - t) * 180)
+    g = int(100 + (1 - t) * 100)
+    b = int(180 + t * 75)
+    return f"rgb({r},{g},{b})"
+
+
+def get_notas_stats(year: int | None = None) -> tuple[str, str, str, str, str]:
+    """Calcula estadísticas resumen para las tarjetas de la sección 3."""
+    data = df_notas if year is None else df_notas[df_notas["año_concurso"] == year]
+    medians = data.groupby("area_label")["nota_norm"].median()
+    if medians.empty:
+        return "---", "N/A", "---", "N/A", "---"
+    
+    max_area = medians.idxmax()
+    max_val = medians.max()
+    min_area = medians.idxmin()
+    min_val = medians.min()
+    diff = max_val - min_val
+    
+    return f"{max_val:.2f}", max_area, f"{min_val:.2f}", min_area, f"{diff:.2f}"
+
+
+def build_notas_fig(year: int | None = None) -> go.Figure:
+    """Box plot horizontal de nota normalizada por área, ordenado por mediana global.
+
+    Args:
+        year: si se especifica, filtra los datos a ese año de concurso.
+    """
+    data = df_notas if year is None else df_notas[df_notas["año_concurso"] == year]
+
+    # Mediana global (para color consistente entre años)
+    medians_global = df_notas.groupby("area_label")["nota_norm"].median()
+    med_min = medians_global.min()
+    med_max = medians_global.max()
+
+    fig = go.Figure()
+
+    for area in _area_median_order:
+        vals = data[data["area_label"] == area]["nota_norm"].dropna()
+        if vals.empty:
+            continue
+        n = len(vals)
+        color = _blue_shade(medians_global.get(area, 4.5), med_min, med_max)
+
+        fig.add_trace(
+            go.Box(
+                x=vals,
+                name=area,
+                orientation="h",
+                marker_color=color,
+                line_color=color,
+                fillcolor=color,
+                opacity=0.8,
+                boxmean=True,
+                hovertemplate=(
+                    f"<b>{area}</b><br>"
+                    "Mediana: %{median:.3f}<br>"
+                    "Q1–Q3: %{q1:.3f} – %{q3:.3f}<br>"
+                    f"n = {n} proyectos<extra></extra>"
+                ),
+            )
+        )
+
+    title = (
+        f"Distribución Año {year}"
+        if year is not None
+        else "Distribución: Todos los años (2012–2019)"
+    )
+    fig.update_layout(
+        **_base_layout(
+            title=dict(text=title, font=dict(size=13, color=TEXT_SECONDARY), x=0.5),
+            xaxis=dict(
+                title="Nota del proyecto (escala 1–7)",
+                showgrid=True,
+                gridcolor=GRID_COLOR,
+                range=[3.8, 5.2],
+            ),
+            yaxis=dict(
+                showgrid=False,
+                tickfont=dict(size=11),
+            ),
+            showlegend=False,
+            hovermode="y",
+            margin=dict(l=200, r=20, t=50, b=40),
+            height=700,
+        )
+    )
+    return fig
+
+
+def build_area_trend_fig(area_label: str) -> go.Figure:
+    """Línea temporal de la mediana de nota normalizada para un área específica."""
+    data = (
+        df_notas[df_notas["area_label"] == area_label]
+        .groupby("año_concurso")["nota_norm"]
+        .agg(
+            mediana="median",
+            q1=lambda x: x.quantile(0.25),
+            q3=lambda x: x.quantile(0.75),
+            n="count",
+        )
+        .reset_index()
+    )
+
+    color = _bump_area_color.get(area_label, ACCENT)
+    historical_median = df_notas[df_notas["area_label"] == area_label]["nota_norm"].median()
+
+    fig = go.Figure()
+
+    # Banda IQR
+    fig.add_trace(
+        go.Scatter(
+            x=pd.concat([data["año_concurso"], data["año_concurso"].iloc[::-1]]),
+            y=pd.concat([data["q3"], data["q1"].iloc[::-1]]),
+            fill="toself",
+            fillcolor=color,
+            line=dict(color="rgba(0,0,0,0)"),
+            opacity=0.15,
+            hoverinfo="skip",
+            showlegend=False,
+            name="IQR",
+        )
+    )
+
+    # Línea de mediana
+    fig.add_trace(
+        go.Scatter(
+            x=data["año_concurso"],
+            y=data["mediana"],
+            mode="lines+markers",
+            line=dict(color=color, width=2.5),
+            marker=dict(size=8, color=color),
+            name="Mediana",
+            hovertemplate=(
+                "Año: %{x}<br>"
+                "Mediana: %{y:.3f}<br>"
+                "n = %{customdata} proyectos<extra></extra>"
+            ),
+            customdata=data["n"].values,
+        )
+    )
+    
+    # Línea de referencia histórica (todos los años)
+    fig.add_hline(
+        y=historical_median,
+        line_dash="dot",
+        line_color=TEXT_SECONDARY,
+        annotation_text="Mediana histórica",
+        annotation_position="bottom right",
+    )
+
+    fig.update_layout(
+        **_base_layout(
+            title=dict(
+                text=f"Evolución de la nota — {area_label}",
+                font=dict(size=13),
+                x=0.5,
+            ),
+            xaxis=dict(
+                tickmode="array",
+                tickvals=YEARS,
+                showgrid=False,
+            ),
+            yaxis=dict(
+                title="Nota (escala 1–7)",
+                showgrid=True,
+                gridcolor=GRID_COLOR,
+                range=[3.8, 5.4],
+            ),
+            showlegend=False,
+            hovermode="x unified",
+            margin=dict(l=50, r=20, t=50, b=40),
+            height=260,
+        )
+    )
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Construcción de figuras originales (Hegemonía y Bump)
+# ---------------------------------------------------------------------------
+
 
 def build_hegemony_fig() -> go.Figure:
     """Área apilada normalizada (100%) de proyectos por institución y año."""
     fig = go.Figure()
 
     for inst_short in _order_short:
-        subset = df_hegemony[df_hegemony["inst_short"] == inst_short].sort_values("año_concurso")
+        subset = df_hegemony[df_hegemony["inst_short"] == inst_short].sort_values(
+            "año_concurso"
+        )
         if subset.empty:
             continue
         color = _inst_colors.get(inst_short, "#ced4da")
@@ -309,7 +499,9 @@ def build_bump_fig(selected_area: str | None = None) -> go.Figure:
     fig = go.Figure()
 
     for area_label in _bump_areas_labels:
-        subset = df_bump[df_bump["area_label"] == area_label].sort_values("año_concurso")
+        subset = df_bump[df_bump["area_label"] == area_label].sort_values(
+            "año_concurso"
+        )
         color = _bump_area_color[area_label]
 
         if selected_area is None:
@@ -381,155 +573,10 @@ def build_bump_fig(selected_area: str | None = None) -> go.Figure:
     return fig
 
 
-def _blue_shade(val: float, med_min: float, med_max: float) -> str:
-    """Devuelve un color RGB en degradado azul según la posición de val en [med_min, med_max]."""
-    t = (val - med_min) / (med_max - med_min) if med_max > med_min else 0.5
-    r = int(30 + (1 - t) * 180)
-    g = int(100 + (1 - t) * 100)
-    b = int(180 + t * 75)
-    return f"rgb({r},{g},{b})"
-
-
-def build_notas_fig(year: int | None = None) -> go.Figure:
-    """Box plot horizontal de nota normalizada por área, ordenado por mediana global.
-
-    Args:
-        year: si se especifica, filtra los datos a ese año de concurso.
-    """
-    data = df_notas if year is None else df_notas[df_notas["año_concurso"] == year]
-
-    # Mediana global (para color consistente entre años)
-    medians_global = df_notas.groupby("area_label")["nota_norm"].median()
-    med_min = medians_global.min()
-    med_max = medians_global.max()
-
-    fig = go.Figure()
-
-    for area in _area_median_order:
-        vals = data[data["area_label"] == area]["nota_norm"].dropna()
-        if vals.empty:
-            continue
-        n = len(vals)
-        color = _blue_shade(medians_global.get(area, 4.5), med_min, med_max)
-
-        fig.add_trace(
-            go.Box(
-                x=vals,
-                name=area,
-                orientation="h",
-                marker_color=color,
-                line_color=color,
-                fillcolor=color,
-                opacity=0.8,
-                boxmean=True,
-                hovertemplate=(
-                    f"<b>{area}</b><br>"
-                    "Mediana: %{median:.3f}<br>"
-                    "Q1–Q3: %{q1:.3f} – %{q3:.3f}<br>"
-                    f"n = {n} proyectos<extra></extra>"
-                ),
-            )
-        )
-
-    title = f"Año {year}" if year is not None else "Todos los años (2012–2019)"
-    fig.update_layout(
-        **_base_layout(
-            title=dict(text=title, font=dict(size=13, color=TEXT_SECONDARY), x=0.5),
-            xaxis=dict(
-                title="Nota del proyecto (escala 1–7)",
-                showgrid=True,
-                gridcolor=GRID_COLOR,
-                range=[3.8, 5.2],
-            ),
-            yaxis=dict(
-                showgrid=False,
-                tickfont=dict(size=11),
-            ),
-            showlegend=False,
-            hovermode="y",
-            margin=dict(l=200, r=20, t=50, b=40),
-            height=700,
-        )
-    )
-    return fig
-
-
-def build_area_trend_fig(area_label: str) -> go.Figure:
-    """Línea temporal de la mediana de nota normalizada para un área específica."""
-    data = (
-        df_notas[df_notas["area_label"] == area_label]
-        .groupby("año_concurso")["nota_norm"]
-        .agg(mediana="median", q1=lambda x: x.quantile(0.25), q3=lambda x: x.quantile(0.75), n="count")
-        .reset_index()
-    )
-
-    color = _bump_area_color.get(area_label, ACCENT)
-
-    fig = go.Figure()
-
-    # Banda IQR
-    fig.add_trace(
-        go.Scatter(
-            x=pd.concat([data["año_concurso"], data["año_concurso"].iloc[::-1]]),
-            y=pd.concat([data["q3"], data["q1"].iloc[::-1]]),
-            fill="toself",
-            fillcolor=color,
-            line=dict(color="rgba(0,0,0,0)"),
-            opacity=0.15,
-            hoverinfo="skip",
-            showlegend=False,
-            name="IQR",
-        )
-    )
-
-    # Línea de mediana
-    fig.add_trace(
-        go.Scatter(
-            x=data["año_concurso"],
-            y=data["mediana"],
-            mode="lines+markers",
-            line=dict(color=color, width=2.5),
-            marker=dict(size=8, color=color),
-            name="Mediana",
-            hovertemplate=(
-                "Año: %{x}<br>"
-                "Mediana: %{y:.3f}<br>"
-                "n = %{customdata} proyectos<extra></extra>"
-            ),
-            customdata=data["n"].values,
-        )
-    )
-
-    fig.update_layout(
-        **_base_layout(
-            title=dict(
-                text=f"Evolución de la nota — {area_label}",
-                font=dict(size=13),
-                x=0.5,
-            ),
-            xaxis=dict(
-                tickmode="array",
-                tickvals=YEARS,
-                showgrid=False,
-            ),
-            yaxis=dict(
-                title="Nota (escala 1–7)",
-                showgrid=True,
-                gridcolor=GRID_COLOR,
-                range=[3.8, 5.4],
-            ),
-            showlegend=False,
-            hovermode="x unified",
-            margin=dict(l=50, r=20, t=50, b=40),
-            height=260,
-        )
-    )
-    return fig
-
-
 # ---------------------------------------------------------------------------
 # Layout
 # ---------------------------------------------------------------------------
+
 
 def _section_header(
     title: str,
@@ -552,7 +599,11 @@ def _section_header(
                         className="mb-1",
                     ),
                     html.H6(subtitle, className="text-secondary mb-2"),
-                    html.P(story, className="text-muted lh-base mb-0", style={"maxWidth": "820px"}),
+                    html.P(
+                        story,
+                        className="text-muted lh-base mb-0",
+                        style={"maxWidth": "820px"},
+                    ),
                 ],
                 width=12,
             )
@@ -585,7 +636,6 @@ layout = html.Div(
             ],
             className="mt-4 mb-4 pb-3 border-bottom border-2 border-primary",
         ),
-
         # ══════════════════════════════════════════════════════════════════
         # SECCIÓN 1 — Hegemonía institucional
         # ══════════════════════════════════════════════════════════════════
@@ -620,7 +670,6 @@ layout = html.Div(
             ],
             className="mb-5",
         ),
-
         # ══════════════════════════════════════════════════════════════════
         # SECCIÓN 2 — Bump chart de áreas
         # ══════════════════════════════════════════════════════════════════
@@ -629,7 +678,7 @@ layout = html.Div(
             subtitle="Ranking anual de áreas de estudio según número de proyectos adjudicados",
             story=(
                 "No todas las disciplinas corrieron la misma suerte. Las Ciencias Jurídicas y Políticas "
-                "pasaron del puesto 7 en 2012 al liderazgo absoluto en 2019, mientras que Biología 2 "
+                "pasaron del puesto 7 in 2012 al liderazgo absoluto en 2019, mientras que Biología 2 "
                 "cayó del top-5 al puesto 17 en el mismo período. Astronomía y Cosmología protagonizó "
                 "el ascenso más espectacular: del puesto 19 al 6. "
                 "Las líneas resaltadas marcan las trayectorias con mayor movimiento."
@@ -641,12 +690,48 @@ layout = html.Div(
                 dbc.Col(
                     dbc.Card(
                         dbc.CardBody(
-                            dcc.Graph(
-                                id="bump-chart",
-                                figure=build_bump_fig(),
-                                config={"displayModeBar": False},
-                                style={"height": "500px"},
-                            )
+                            [
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                html.Label(
+                                                    "Selecciona un área para resaltar:",
+                                                    className="small text-muted mb-1",
+                                                ),
+                                                dcc.Dropdown(
+                                                    id="bump-area-dropdown",
+                                                    options=[
+                                                        {
+                                                            "label": "Resaltar recomendados",
+                                                            "value": "none",
+                                                        }
+                                                    ]
+                                                    + [
+                                                        {"label": a, "value": a}
+                                                        for a in sorted(
+                                                            _bump_areas_labels
+                                                        )
+                                                    ],
+                                                    value="none",
+                                                    clearable=False,
+                                                    className="shadow-sm",
+                                                ),
+                                            ],
+                                            width=12,
+                                            md=6,
+                                            lg=4,
+                                            className="mb-3",
+                                        )
+                                    ]
+                                ),
+                                dcc.Graph(
+                                    id="bump-chart",
+                                    figure=build_bump_fig(),
+                                    config={"displayModeBar": False},
+                                    style={"height": "500px"},
+                                ),
+                            ]
                         ),
                         className="shadow-sm border-0",
                     ),
@@ -655,7 +740,6 @@ layout = html.Div(
             ],
             className="mb-5",
         ),
-
         # ══════════════════════════════════════════════════════════════════
         # SECCIÓN 3 — Distribución de notas
         # ══════════════════════════════════════════════════════════════════
@@ -686,16 +770,18 @@ layout = html.Div(
                                         dbc.CardBody(
                                             [
                                                 html.H2(
-                                                    "4.76",
+                                                    "---",
+                                                    id="stat-max-val",
                                                     className="fw-bold mb-0",
                                                     style={"color": ACCENT},
                                                 ),
                                                 html.P(
-                                                    "Mediana más alta",
+                                                    "N/A",
+                                                    id="stat-max-label",
                                                     className="text-secondary mb-0 small",
                                                 ),
                                                 html.P(
-                                                    "Matemáticas",
+                                                    "Mediana más alta",
                                                     className="fw-semibold mb-0",
                                                 ),
                                             ]
@@ -709,16 +795,18 @@ layout = html.Div(
                                         dbc.CardBody(
                                             [
                                                 html.H2(
-                                                    "4.29",
+                                                    "---",
+                                                    id="stat-min-val",
                                                     className="fw-bold mb-0",
                                                     style={"color": "#e07b54"},
                                                 ),
                                                 html.P(
-                                                    "Mediana más baja",
+                                                    "N/A",
+                                                    id="stat-min-label",
                                                     className="text-secondary mb-0 small",
                                                 ),
                                                 html.P(
-                                                    "Medicina G1",
+                                                    "Mediana más baja",
                                                     className="fw-semibold mb-0",
                                                 ),
                                             ]
@@ -732,16 +820,17 @@ layout = html.Div(
                                         dbc.CardBody(
                                             [
                                                 html.H2(
-                                                    "0.47",
+                                                    "---",
+                                                    id="stat-diff-val",
                                                     className="fw-bold mb-0",
                                                     style={"color": "#6c757d"},
                                                 ),
                                                 html.P(
-                                                    "Diferencia mediana máx–mín",
+                                                    "Brecha máx–mín",
                                                     className="text-secondary mb-0 small",
                                                 ),
                                                 html.P(
-                                                    "Brecha entre disciplinas",
+                                                    "Diferencia entre áreas",
                                                     className="fw-semibold mb-0",
                                                 ),
                                             ]
@@ -755,11 +844,67 @@ layout = html.Div(
                         ),
                         dbc.Card(
                             dbc.CardBody(
-                                dcc.Graph(
-                                    id="notas-chart",
-                                    figure=build_notas_fig(),
-                                    config={"displayModeBar": False},
-                                )
+                                [
+                                    # Fila del Slider - Ancho completo
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                [
+                                                    html.Label("Filtrar por año de concurso:", className="small text-muted mb-1"),
+                                                    dcc.Slider(
+                                                        id="year-slider",
+                                                        min=2011,
+                                                        max=2019,
+                                                        step=1,
+                                                        value=2011,
+                                                        marks={
+                                                            2011: {"label": "Todos", "style": {"fontWeight": "bold", "color": ACCENT}},
+                                                            **{y: str(y) for y in YEARS}
+                                                        },
+                                                        included=False,
+                                                        className="mt-2",
+                                                    ),
+                                                ],
+                                                width=12,
+                                                className="mb-4",
+                                            )
+                                        ]
+                                    ),
+                                    # Fila del Gráfico de Notas - Ancho completo
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                dcc.Graph(
+                                                    id="notas-chart",
+                                                    figure=build_notas_fig(None),
+                                                    config={"displayModeBar": False},
+                                                ),
+                                                width=12,
+                                            ),
+                                        ]
+                                    ),
+                                    # Fila de detalle (Evolución) - Ancho completo abajo
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                html.Div(
+                                                    id="area-trend-container",
+                                                    children=[
+                                                        html.Div(
+                                                            [
+                                                                html.I(className="bi bi-cursor-fill me-2"),
+                                                                "Haz clic en una caja del gráfico superior para ver la evolución histórica del área"
+                                                            ],
+                                                            className="text-muted text-center py-4 border rounded bg-light small",
+                                                        )
+                                                    ]
+                                                ),
+                                                width=12,
+                                                className="mt-4",
+                                            )
+                                        ]
+                                    ),
+                                ]
                             ),
                             className="shadow-sm border-0",
                         ),
@@ -769,7 +914,6 @@ layout = html.Div(
             ],
             className="mb-5",
         ),
-
         # ── Nota metodológica ─────────────────────────────────────────────
         dbc.Row(
             [
@@ -792,3 +936,60 @@ layout = html.Div(
     ],
     className="px-3",
 )
+
+
+# ---------------------------------------------------------------------------
+# Callbacks
+# ---------------------------------------------------------------------------
+
+
+@callback(
+    Output("bump-chart", "figure"),
+    Input("bump-area-dropdown", "value"),
+)
+def update_bump_chart(selected_area: str):
+    """Actualiza el bump chart resaltando el área seleccionada."""
+    area = None if selected_area == "none" else selected_area
+    return build_bump_fig(selected_area=area)
+
+
+@callback(
+    [
+        Output("notas-chart", "figure"),
+        Output("stat-max-val", "children"),
+        Output("stat-max-label", "children"),
+        Output("stat-min-val", "children"),
+        Output("stat-min-label", "children"),
+        Output("stat-diff-val", "children"),
+    ],
+    Input("year-slider", "value"),
+)
+def update_notas_section(selected_year: int):
+    """Filtra el box plot de notas y actualiza las tarjetas de estadísticas."""
+    year = None if selected_year == 2011 else selected_year
+    fig = build_notas_fig(year=year)
+    max_v, max_l, min_v, min_l, diff = get_notas_stats(year=year)
+    return fig, max_v, max_l, min_v, min_l, diff
+
+
+@callback(
+    Output("area-trend-container", "children"),
+    Input("notas-chart", "clickData"),
+    prevent_initial_call=True,
+)
+def display_area_trend(clickData):
+    """Muestra la evolución temporal de la nota al hacer clic en una área del box plot."""
+    if not clickData:
+        return no_update
+
+    # Obtener el nombre del área desde clickData
+    try:
+        area_label = clickData["points"][0]["y"]
+    except (KeyError, IndexError):
+        return no_update
+
+    return dcc.Graph(
+        id="area-trend-chart",
+        figure=build_area_trend_fig(area_label),
+        config={"displayModeBar": False},
+    )
