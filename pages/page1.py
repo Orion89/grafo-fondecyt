@@ -22,6 +22,50 @@ dash.register_page(
 
 df = pd.read_csv("./data/proyectos_fondecyt_2012-2019.csv")
 
+
+def _section_header(
+    title: str,
+    subtitle: str,
+    story: str,
+    badge_text=None,
+    title_id=None,
+) -> dbc.Row:
+    """Encabezado narrativo reutilizable para cada sección."""
+    badge = (
+        dbc.Badge(badge_text, color="primary", className="me-2 fs-6")
+        if badge_text
+        else None
+    )
+
+    h3_kwargs = {"className": "d-inline fw-bold mb-1"}
+    if title_id:
+        h3_kwargs["id"] = title_id
+
+    return dbc.Row(
+        [
+            dbc.Col(
+                [
+                    html.Div(
+                        [
+                            badge,
+                            html.H3(title, **h3_kwargs),
+                        ],
+                        className="mb-1",
+                    ),
+                    html.H6(subtitle, className="text-secondary mb-2"),
+                    html.P(
+                        story,
+                        className="text-muted lh-base mb-0",
+                        style={"maxWidth": "820px"},
+                    ),
+                ],
+                width=12,
+            )
+        ],
+        className="mb-3 mt-4",
+    )
+
+
 layout = html.Div(
     [
         dbc.Row(
@@ -133,48 +177,72 @@ layout = html.Div(
             justify="around",
             class_name="mb-3 border-2 border-bottom border-primary ",
         ),
+        # ══════════════════════════════════════════════════════════════════
+        # SECCIÓN 1 — Mapa de Prioridades
+        # ══════════════════════════════════════════════════════════════════
+        _section_header(
+            title="Mapa de Prioridades de Investigación",
+            subtitle="¿Qué frentes del conocimiento lideran la agenda institucional?",
+            story=(
+                "No todas las instituciones apuestan por los mismos frentes del conocimiento. "
+                "Este mapa de rectángulos revela el ecosistema de prioridades de la universidad: "
+                "el tamaño de cada bloque es proporcional al número de proyectos adjudicados en cada disciplina. "
+                "Es, en esencia, la huella digital del impacto científico de la institución."
+            ),
+            badge_text="01",
+            title_id="title-treemap-1",
+        ),
         dbc.Row(
             [
                 dbc.Col(
-                    [
-                        html.Div(
-                            [
-                                html.H4(
-                                    id="title-treemap-1",
-                                    className="mb-1 text-center text-primary",
-                                ),
-                                dcc.Graph(
-                                    id="treemap-1",
-                                    className="mt-0",
-                                    config={"displayModeBar": False},
-                                ),
-                            ]
-                        )
-                    ],
-                    width={"size": 6},
-                    align="center",
-                ),
-                dbc.Col(
-                    [
-                        html.Div(
-                            [
-                                html.H4(
-                                    "Proporción por tipo de proyecto",
-                                    className="mb-1 text-center text-primary",
-                                ),
-                                dcc.Graph(
-                                    id="donut-1", config={"displayModeBar": False}
-                                ),
-                            ]
-                        )
-                    ],
-                    width={"size": 6},
-                ),
+                    dbc.Card(
+                        dbc.CardBody(
+                            dcc.Graph(
+                                id="treemap-1",
+                                config={"displayModeBar": False},
+                                style={"height": "500px"},
+                            )
+                        ),
+                        className="shadow-sm border-0",
+                    ),
+                    width=12,
+                )
             ],
-            class_name="mt-3 mb-1",
-            justify="evenly",
+            className="mb-5",
         ),
-    ]
+        # ══════════════════════════════════════════════════════════════════
+        # SECCIÓN 2 — Proporción por tipo de proyecto
+        # ══════════════════════════════════════════════════════════════════
+        _section_header(
+            title="Proporción por tipo de proyecto",
+            subtitle="¿Cómo se distribuye la inversión entre investigadores nóveles y consolidados?",
+            story=(
+                "El equilibrio entre los distintos instrumentos de financiamiento habla de la madurez "
+                "y renovación del cuerpo académico. Los proyectos Regulares consolidan líneas de investigación, "
+                "mientras que Iniciación y Postdoctorado son el motor de renovación y atracción de nuevos talentos."
+            ),
+            badge_text="02",
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        dbc.CardBody(
+                            dcc.Graph(
+                                id="donut-1",
+                                config={"displayModeBar": False},
+                                style={"height": "500px"},
+                            )
+                        ),
+                        className="shadow-sm border-0",
+                    ),
+                    width=12,
+                )
+            ],
+            className="mb-5",
+        ),
+    ],
+    className="px-3",
 )
 
 
