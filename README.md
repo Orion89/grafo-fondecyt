@@ -4,7 +4,9 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Plotly Dash](https://img.shields.io/badge/Framework-Plotly%20Dash-orange)](https://dash.plotly.com/)
 
-Este proyecto es una plataforma de **Análisis Exploratorio de Grafos (EGA)** y **Data Storytelling** diseñada para visualizar y comprender el ecosistema de investigación financiado por el fondo FONDECYT en Chile (periodo 2012-2019). A través de una interfaz interactiva construida con **Plotly Dash**, la aplicación permite descubrir patrones ocultos de colaboración, hegemonía institucional y trayectorias académicas.
+Este proyecto es una plataforma de **Análisis Exploratorio de Grafos (EGA)** y **Data Storytelling** diseñada para visualizar y comprender el ecosistema de investigación financiado por el fondo FONDECYT en Chile (periodo 2012-2019). A través de una interfaz interactiva construida con **Plotly Dash**, la aplicación permite descubrir patrones de colaboración, hegemonía institucional y trayectorias académicas.
+
+![visualización de esquema neo4j](./img/graph.svg)
 
 ## 🚀 Pilares del Proyecto
 
