@@ -1,8 +1,8 @@
 import os
 
 import dash
-from dash import Dash, html
 import dash_bootstrap_components as dbc
+from dash import Dash, html
 from dashvis import stylesheets
 
 app = Dash(
@@ -92,7 +92,7 @@ app.layout = dbc.Container(
                                                     href="https://www.linkedin.com/in/leonardo-molina-v-68a601183/",
                                                     title="LinkedIn profile",
                                                 ),
-                                                " 2023 Leonardo Molina V.",
+                                                " 2023-2026 Leonardo Molina V.",
                                             ],
                                             className="fs-5",
                                         ),
