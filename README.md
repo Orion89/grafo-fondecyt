@@ -6,6 +6,10 @@
 
 Este proyecto es una plataforma de **Análisis Exploratorio de Grafos (EGA)** y **Data Storytelling** diseñada para visualizar y comprender el ecosistema de investigación financiado por el fondo FONDECYT en Chile (periodo 2012-2019). A través de una interfaz interactiva construida con **Plotly Dash**, la aplicación permite descubrir patrones de colaboración, hegemonía institucional y trayectorias académicas.
 
+Web app alojada en [Railway](https://railway.com): [https://grafo-fondecyt-production.up.railway.app/](https://grafo-fondecyt-production.up.railway.app/)
+
+Esquema principal:
+
 ![visualización de esquema neo4j](./img/graph.svg)
 
 ## 🚀 Pilares del Proyecto
