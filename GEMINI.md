@@ -21,8 +21,9 @@ This project is a multi-page Dash application designed to visualize and analyze 
 - `data_process.py`: Contains utility functions for filtering data and converting NetworkX graphs to formats compatible with Pyvis/Dashvis.
 - `pages/`: Contains the logic and layout for each page:
     - `page1.py`: Knowledge Graph of projects, filtered by university and year. Includes treemap and donut charts.
-    - `page2.py`: Researcher co-occurrence network.
-    - `page3.py`: (Likely additional network analysis or metrics).
+    - `page2.py`: Researcher co-occurrence network (Collaboration graph).
+    - `page3.py`: System Trends (2012–2019): Institutional hegemony, evolution of study areas (bump chart), and distribution of project grades.
+    - `page4.py`: Researcher Trajectories: Institutional mobility (Sankey), interdisciplinary collaboration, and career progression (Postdoc to PI).
 - `data/`: Datasets used by the application (CSV, PKL, JSON).
 - `network_options/`: Custom styling and configuration for network visualizations.
 - `static/`, `assets/`, `img/`: Images, icons, and static assets.
@@ -51,13 +52,13 @@ By default, the app runs on `http://0.0.0.0:8050`.
 - **Page Registration:** New pages should be added to the `pages/` directory and use `dash.register_page`.
 - **Styling:** Uses Dash Bootstrap Components (`dbc.themes.FLATLY`) for layout and responsiveness.
 - **Data Handling:** Data is typically loaded from `data/` using Pandas.
-- **Graph Visualization:** The project heavily relies on `Dashvis` and `NetworkX` for interactive network diagrams.
+- **Graph Visualization:** The project heavily relies on `Dashvis` (`DashNetwork` component) and `NetworkX` for interactive network diagrams.
 
 ## Key Files to Reference
 
 - `app.py`: Application configuration and shared layout.
-- `data_process.py`: Core graph transformation logic.
-- `pages/page1.py`: Example of a page with complex callbacks and multiple visualizations.
+- `data_process.py`: Core graph transformation logic and data filtering.
+- `pages/page3.py`: Implementation of complex storytelling visualizations (Bump chart, Grade distributions).
 - `README.md`: High-level description and visual examples of the graphs.
 
 ## General guidelines

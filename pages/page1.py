@@ -72,21 +72,39 @@ layout = html.Div(
             [
                 dbc.Col(
                     [
-                        html.P(
-                            "Seleccionar la universiadad y año de en la parte inferior del grafo",
-                            className="mb-0 text-secondary",
+                        html.Div(
+                            [
+                                dbc.Badge("01", color="primary", className="me-2 fs-6"),
+                                html.H3(
+                                    "Ecosistema de Colaboración Científica",
+                                    className="d-inline fw-bold mb-1",
+                                ),
+                            ],
+                            className="mb-1",
+                        ),
+                        html.H6(
+                            "Explorando el tejido de la ciencia nacional",
+                            className="text-secondary mb-2",
                         ),
                         html.P(
-                            "Para más información, pasar el puntero sobre cada nodo.",
-                            className="mb-0 text-secondary",
+                            "Detrás de cada descubrimiento hay una red invisible de mentes y recursos que lo hacen posible. "
+                            "Este grafo de conocimiento permite desentrañar el tejido de la ciencia en Chile, conectando investigadores, "
+                            "proyectos, áreas del saber y universidades. Es el mapa de la curiosidad y la colaboración.",
+                            className="text-muted lh-base mb-3",
                         ),
-                        html.P(
-                            "Zoom usando el scrool del ratón.",
+                        html.Div(
+                            [
+                                html.I(className="bi bi-info-circle me-2"),
+                                html.Small(
+                                    "Interactúa con la red: Haz click en los nodos, arrástralos para reorganizar tu vista, "
+                                    "usa el scroll del ratón para hacer zoom y deja el puntero sobre un nodo para revelar sus detalles."
+                                ),
+                            ],
                             className="text-secondary",
                         ),
                     ],
-                    width={"size": 6, "offset": 0},
-                    align="end",
+                    width={"size": 7, "offset": 0},
+                    align="center",
                 ),
                 dbc.Col(
                     [
@@ -99,23 +117,20 @@ layout = html.Div(
                                 ),
                                 dbc.CardBody(
                                     [
-                                        html.H3(
-                                            "Red de Conocimiento Científico",
-                                            className="card-title",
-                                        ),
                                         html.P(
-                                            "Conexiones entre investigadores, proyectos Fondecyt, áreas de estudio y universidades",
-                                            className="card-text",
+                                            "Visualización interactiva de adjudicaciones FONDECYT (2012-2019).",
+                                            className="card-text small text-secondary",
                                         ),
                                     ]
                                 ),
-                            ]
+                            ],
+                            className="border-0 bg-transparent",
                         )
                     ],
-                    width={"size": 6},
+                    width={"size": 5},
                 ),
             ],
-            class_name="mb-3 mt-3",
+            class_name="mb-3 mt-4",
         ),
         dbc.Row(
             [
@@ -189,7 +204,7 @@ layout = html.Div(
                 "el tamaño de cada bloque es proporcional al número de proyectos adjudicados en cada disciplina. "
                 "Es, en esencia, la huella digital del impacto científico de la institución."
             ),
-            badge_text="01",
+            badge_text="02",
             title_id="title-treemap-1",
         ),
         dbc.Row(
@@ -221,7 +236,7 @@ layout = html.Div(
                 "y renovación del cuerpo académico. Los proyectos Regulares consolidan líneas de investigación, "
                 "mientras que Iniciación y Postdoctorado son el motor de renovación y atracción de nuevos talentos."
             ),
-            badge_text="02",
+            badge_text="03",
         ),
         dbc.Row(
             [
