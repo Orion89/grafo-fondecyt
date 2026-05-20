@@ -72,26 +72,57 @@ layout = html.Div(
             [
                 dbc.Col(
                     [
-                        html.Div(
-                            [
-                                dbc.Badge("01", color="primary", className="me-2 fs-6"),
-                                html.H3(
-                                    "Ecosistema de Colaboración Científica",
-                                    className="d-inline fw-bold mb-1",
-                                ),
-                            ],
-                            className="mb-1",
+                        html.H1(
+                            "Conectando Mentes, Financiando el Futuro",
+                            className="fw-bold text-primary mb-3",
                         ),
-                        html.H6(
-                            "Explorando el tejido de la ciencia nacional",
-                            className="text-secondary mb-2",
+                        html.H5(
+                            "La ciencia no ocurre en el vacío; ocurre en el cruce entre la curiosidad de un investigador y el respaldo de una institución.",
+                            className="text-secondary mb-4",
                         ),
                         html.P(
-                            "Detrás de cada descubrimiento hay una red invisible de mentes y recursos que lo hacen posible. "
-                            "Este grafo de conocimiento permite desentrañar el tejido de la ciencia en Chile, conectando investigadores, "
-                            "proyectos, áreas del saber y universidades. Es el mapa de la curiosidad y la colaboración.",
-                            className="text-muted lh-base mb-3",
+                            [
+                                "Entre 2012 y 2019, Chile tejió una red de conocimiento sin precedentes a través de miles de adjudicaciones FONDECYT. "
+                                "Este proyecto es la ",
+                                html.B("huella digital del progreso científico nacional"),
+                                ". Te invitamos a navegar por este ecosistema interactivo para mapear la colaboración, rastrear el talento e identificar las tendencias que lideran la agenda científica.",
+                            ],
+                            className="text-muted lh-base fs-5",
                         ),
+                    ],
+                    width=8,
+                ),
+                dbc.Col(
+                    [
+                        html.Img(
+                            src="./static/Logo-Fondecyt-1.png",
+                            style={"maxWidth": "300px", "width": "100%"},
+                            className="float-end",
+                        )
+                    ],
+                    width=4,
+                    align="start",
+                ),
+            ],
+            className="mb-5 mt-5",
+        ),
+        # ══════════════════════════════════════════════════════════════════
+        # SECCIÓN 01 — Grafo de Conocimiento
+        # ══════════════════════════════════════════════════════════════════
+        _section_header(
+            title="Ecosistema de Colaboración Científica",
+            subtitle="Explorando el tejido de la ciencia nacional",
+            story=(
+                "Detrás de cada descubrimiento hay una red invisible de mentes y recursos. "
+                "Este grafo de conocimiento permite desentrañar el tejido de la ciencia en Chile, "
+                "conectando investigadores, proyectos, áreas del saber y universidades."
+            ),
+            badge_text="01",
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
                         html.Div(
                             [
                                 html.I(className="bi bi-info-circle me-2"),
@@ -100,37 +131,12 @@ layout = html.Div(
                                     "usa el scroll del ratón para hacer zoom y deja el puntero sobre un nodo para revelar sus detalles."
                                 ),
                             ],
-                            className="text-secondary",
+                            className="text-secondary mb-3",
                         ),
                     ],
-                    width={"size": 7, "offset": 0},
-                    align="center",
-                ),
-                dbc.Col(
-                    [
-                        dbc.Card(
-                            [
-                                dbc.CardImg(
-                                    src="./static/Logo-Fondecyt-1.png",
-                                    top=True,
-                                    style={"max-width": "250px"},
-                                ),
-                                dbc.CardBody(
-                                    [
-                                        html.P(
-                                            "Visualización interactiva de adjudicaciones FONDECYT (2012-2019).",
-                                            className="card-text small text-secondary",
-                                        ),
-                                    ]
-                                ),
-                            ],
-                            className="border-0 bg-transparent",
-                        )
-                    ],
-                    width={"size": 5},
-                ),
-            ],
-            class_name="mb-3 mt-4",
+                    width=12,
+                )
+            ]
         ),
         dbc.Row(
             [
