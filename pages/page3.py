@@ -1,580 +1,131 @@
 """
-Página 3 — Tendencias del sistema Fondecyt (2012–2019)
+Página 3 — Trayectorias e investigadores
 
-Tres análisis exploratorios con storytelling:
-  1. Hegemonía institucional: ¿se democratizó el financiamiento?
-  2. Ascenso y caída de áreas: bump chart de rankings anuales
-  3. Calidad de los proyectos: distribución de notas por área
+Análisis de la movilidad institucional, colaboración interdisciplinaria y evolución de carrera de los investigadores Fondecyt.
 """
 
-from __future__ import annotations
-
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 import dash
-from dash import dcc, html, callback, Input, Output, no_update
+from dash import dcc, html, callback, Input, Output
 import dash_bootstrap_components as dbc
+import numpy as np
 
-# ---------------------------------------------------------------------------
-# Registro de página
-# ---------------------------------------------------------------------------
 dash.register_page(
     __name__,
-    path="/tendencias",
-    name="Tendencias del sistema",
-    title="Tendencias Fondecyt 2012–2019",
-    description="Análisis exploratorio de hegemonía institucional, evolución de áreas y calidad de proyectos",
+    path="/trayectorias",
+    name="Trayectorias e investigadores",
+    title="Trayectorias e investigadores",
+    description="Análisis de movilidad, colaboración entre áreas y evolución de postdoctorados.",
 )
 
-# ---------------------------------------------------------------------------
-# Constantes de estilo
-# ---------------------------------------------------------------------------
-ACCENT = "#3394D5"
-BG_PLOT = "white"
-GRID_COLOR = "#e8ecef"
-TEXT_SECONDARY = "#6c757d"
-FONT_FAMILY = "Open Sans, Arial, sans-serif"
-
-AREA_LABELS: dict[str, str] = {
-    "matematicas": "Matemáticas",
-    "antrop. y arque": "Antropología y Arqueología",
-    "astron.,cosmol.y par": "Astronomía y Cosmología",
-    "filosofia": "Filosofía",
-    "fisica teorica y exp": "Física",
-    "biologia 1": "Biología 1",
-    "cs. de la tierra": "Cs. de la Tierra",
-    "linguistica,literatu": "Lingüística y Literatura",
-    "historia": "Historia",
-    "ingenieria 3": "Ingeniería 3",
-    "ingenieria 2": "Ingeniería 2",
-    "ingenieria 1": "Ingeniería 1",
-    "quimica 1": "Química 1",
-    "quimica 2": "Química 2",
-    "cs. juridicas y pol.": "Cs. Jurídicas y Políticas",
-    "sociologia cs i": "Sociología",
-    "biologia 3": "Biología 3",
-    "cs. econom/admi": "Cs. Económicas y Admin.",
-    "biologia 2": "Biología 2",
-    "agronomia": "Agronomía",
-    "medicina g2-g3": "Medicina G2-G3",
-    "educacion": "Educación",
-    "geografia y urbanism": "Geografía y Urbanismo",
-    "artes y arquitectura": "Artes y Arquitectura",
-    "salud prod anim": "Salud y Prod. Animal",
-    "sicologia": "Psicología",
-    "medicina g1": "Medicina G1",
-    "quimica": "Química",
-}
-
-# Instituciones con nombre abreviado para el gráfico
-INST_SHORT: dict[str, str] = {
-    "Univ. De Chile": "U. de Chile",
-    "Pont. Univ. Catolica De Chile": "PUC",
-    "Univ. De Santiago De Chile": "USACH",
-    "Univ. Andres Bello": "UNAB",
-    "Univ. Diego Portales": "UDP",
-    "Univ. Adolfo Ibanez": "UAI",
-    "Univ. De Los Andes": "U. Andes",
-    "Univ. Alberto Hurtado": "UAH",
-    "Univ. De Concepcion": "U. Concepción",
-    "Univ. Tecnica Federico Santa Maria": "UTFSM",
-}
-
-YEARS = list(range(2012, 2020))
-
-# ---------------------------------------------------------------------------
-# Carga y preparación de datos (una sola vez al importar el módulo)
-# ---------------------------------------------------------------------------
-df_raw = pd.read_csv("./data/proyectos_fondecyt_2012-2019.csv")
-
-# Un registro por proyecto (evitar duplicados por co-investigadores)
-df_proj = df_raw.drop_duplicates("folioproy").copy()
-
-# Normalizar nota_proyecto: 2012 usa escala 0–100, el resto usa 1–7
-mask_2012 = df_proj["año_concurso"] == 2012
-df_proj["nota_norm"] = df_proj["nota_proyecto"].copy()
-df_proj.loc[mask_2012, "nota_norm"] = (
-    1 + (df_proj.loc[mask_2012, "nota_proyecto"] / 100) * 6
-)
-
-# Etiquetas legibles para áreas
-df_proj["area_label"] = (
-    df_proj["area_estudio"].map(AREA_LABELS).fillna(df_proj["area_estudio"])
-)
-
-# ---------------------------------------------------------------------------
-# Datos para gráfico 1: Hegemonía institucional
-# ---------------------------------------------------------------------------
-TOP_N_INST = 8
-
-_top_inst_global = (
-    df_proj.groupby("institucion_patrocinante")["folioproy"]
-    .count()
-    .nlargest(TOP_N_INST)
-    .index.tolist()
-)
-
-_inst_year = (
-    df_proj.groupby(["año_concurso", "institucion_patrocinante"])["folioproy"]
-    .count()
-    .reset_index(name="n_proyectos")
-)
-
-# Agrupar instituciones fuera del top como "Otras"
-_inst_year["inst_group"] = _inst_year["institucion_patrocinante"].apply(
-    lambda x: x if x in _top_inst_global else "Otras universidades"
-)
-df_hegemony = (
-    _inst_year.groupby(["año_concurso", "inst_group"])["n_proyectos"]
-    .sum()
-    .reset_index()
-)
-df_hegemony["inst_short"] = (
-    df_hegemony["inst_group"].map(INST_SHORT).fillna(df_hegemony["inst_group"])
-)
-
-# Orden de apilado: Otras al fondo, luego de menor a mayor
-_order = ["Otras universidades"] + list(reversed(_top_inst_global))
-_order_short = [INST_SHORT.get(i, i) for i in _order]
-
-# Porcentaje por año
-_total_year = df_hegemony.groupby("año_concurso")["n_proyectos"].transform("sum")
-df_hegemony["pct"] = (df_hegemony["n_proyectos"] / _total_year * 100).round(1)
-
-# ---------------------------------------------------------------------------
-# Datos para gráfico 2: Bump chart de áreas
-# ---------------------------------------------------------------------------
-# Áreas con narrativa clara: las que más cambiaron + las más grandes
-BUMP_AREAS_RAW = [
-    "cs. juridicas y pol.",
-    "astron.,cosmol.y par",
-    "biologia 2",
-    "biologia 3",
-    "ingenieria 2",
-    "matematicas",
-    "medicina g1",
-    "medicina g2-g3",
-    "sociologia cs i",
-    "educacion",
-    "quimica 1",
-    "historia",
-]
-
-_area_year_count = (
-    df_proj.groupby(["año_concurso", "area_estudio"])["folioproy"]
-    .count()
-    .reset_index(name="n_proyectos")
-)
-_area_year_count["rank"] = (
-    _area_year_count.groupby("año_concurso")["n_proyectos"]
-    .rank(ascending=False, method="min")
-    .astype(int)
-)
-df_bump = _area_year_count[_area_year_count["area_estudio"].isin(BUMP_AREAS_RAW)].copy()
-df_bump["area_label"] = df_bump["area_estudio"].map(AREA_LABELS)
-
-# ---------------------------------------------------------------------------
-# Datos para gráfico 3: Distribución de notas por área
-# ---------------------------------------------------------------------------
-# Excluir "quimica" (solo 8 proyectos, escala diferente)
-df_notas = df_proj[df_proj["area_estudio"] != "quimica"].copy()
-
-# Ordenar áreas por mediana de nota normalizada
-_area_median_order = (
-    df_notas.groupby("area_label")["nota_norm"]
-    .median()
-    .sort_values(ascending=True)
-    .index.tolist()
-)
-
-# ---------------------------------------------------------------------------
-# Paleta de colores para instituciones y áreas del bump chart
-# ---------------------------------------------------------------------------
-_inst_palette = px.colors.qualitative.Bold
-_inst_colors: dict[str, str] = {}
-for i, inst in enumerate(_top_inst_global):
-    short = INST_SHORT.get(inst, inst)
-    _inst_colors[short] = _inst_palette[i % len(_inst_palette)]
-_inst_colors["Otras universidades"] = "#ced4da"
-
-# Paleta y colores del bump chart (necesarios en el callback)
-_bump_palette = px.colors.qualitative.Alphabet
-_bump_areas_labels = df_bump["area_label"].unique().tolist()
-_bump_area_color: dict[str, str] = {
-    a: _bump_palette[i % len(_bump_palette)] for i, a in enumerate(_bump_areas_labels)
-}
-_BUMP_HIGHLIGHTED = {
-    "Cs. Jurídicas y Políticas",
-    "Astronomía y Cosmología",
-    "Biología 2",
-    "Ingeniería 2",
-}
+# Load data
+df = pd.read_csv("./data/proyectos_fondecyt_2012-2019.csv")
 
 
-# ---------------------------------------------------------------------------
-# Helpers de layout de figura
-# ---------------------------------------------------------------------------
-def _base_layout(**kwargs) -> dict:
-    base = dict(
-        font=dict(family=FONT_FAMILY, color="#2c3e50"),
-        paper_bgcolor=BG_PLOT,
-        plot_bgcolor=BG_PLOT,
-        margin=dict(l=20, r=20, t=50, b=20),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-            font=dict(size=11),
-        ),
-        hoverlabel=dict(
-            bgcolor="white",
-            font_size=13,
-            font_family=FONT_FAMILY,
-        ),
+def get_mobility_data(df):
+    # Filter researchers with more than one institution
+    researcher_inst = (
+        df.sort_values(["nombre_completo", "año_concurso"])
+        .groupby("nombre_completo")["institucion_patrocinante"]
+        .unique()
     )
-    base.update(kwargs)
-    return base
+    mobile_researchers = researcher_inst[researcher_inst.apply(len) > 1]
 
+    transitions = []
+    for inst_list in mobile_researchers:
+        for i in range(len(inst_list) - 1):
+            transitions.append((inst_list[i], inst_list[i + 1]))
 
-# ---------------------------------------------------------------------------
-# Helpers de datos y figuras de la sección 3
-# ---------------------------------------------------------------------------
-
-def _blue_shade(val: float, med_min: float, med_max: float) -> str:
-    """Devuelve un color RGB en degradado azul según la posición de val en [med_min, med_max]."""
-    t = (val - med_min) / (med_max - med_min) if med_max > med_min else 0.5
-    r = int(30 + (1 - t) * 180)
-    g = int(100 + (1 - t) * 100)
-    b = int(180 + t * 75)
-    return f"rgb({r},{g},{b})"
-
-
-def get_notas_stats(year: int | None = None) -> tuple[str, str, str, str, str]:
-    """Calcula estadísticas resumen para las tarjetas de la sección 3."""
-    data = df_notas if year is None else df_notas[df_notas["año_concurso"] == year]
-    medians = data.groupby("area_label")["nota_norm"].median()
-    if medians.empty:
-        return "---", "N/A", "---", "N/A", "---"
-    
-    max_area = medians.idxmax()
-    max_val = medians.max()
-    min_area = medians.idxmin()
-    min_val = medians.min()
-    diff = max_val - min_val
-    
-    return f"{max_val:.2f}", max_area, f"{min_val:.2f}", min_area, f"{diff:.2f}"
-
-
-def build_notas_fig(year: int | None = None) -> go.Figure:
-    """Box plot horizontal de nota normalizada por área, ordenado por mediana global.
-
-    Args:
-        year: si se especifica, filtra los datos a ese año de concurso.
-    """
-    data = df_notas if year is None else df_notas[df_notas["año_concurso"] == year]
-
-    # Mediana global (para color consistente entre años)
-    medians_global = df_notas.groupby("area_label")["nota_norm"].median()
-    med_min = medians_global.min()
-    med_max = medians_global.max()
-
-    fig = go.Figure()
-
-    for area in _area_median_order:
-        vals = data[data["area_label"] == area]["nota_norm"].dropna()
-        if vals.empty:
-            continue
-        n = len(vals)
-        color = _blue_shade(medians_global.get(area, 4.5), med_min, med_max)
-
-        fig.add_trace(
-            go.Box(
-                x=vals,
-                name=area,
-                orientation="h",
-                marker_color=color,
-                line_color=color,
-                fillcolor=color,
-                opacity=0.8,
-                boxmean=True,
-                hovertemplate=(
-                    f"<b>{area}</b><br>"
-                    "Mediana: %{median:.3f}<br>"
-                    "Q1–Q3: %{q1:.3f} – %{q3:.3f}<br>"
-                    f"n = {n} proyectos<extra></extra>"
-                ),
-            )
-        )
-
-    title = (
-        f"Distribución Año {year}"
-        if year is not None
-        else "Distribución: Todos los años (2012–2019)"
-    )
-    fig.update_layout(
-        **_base_layout(
-            title=dict(text=title, font=dict(size=13, color=TEXT_SECONDARY), x=0.5),
-            xaxis=dict(
-                title="Nota del proyecto (escala 1–7)",
-                showgrid=True,
-                gridcolor=GRID_COLOR,
-                range=[3.8, 5.2],
-            ),
-            yaxis=dict(
-                showgrid=False,
-                tickfont=dict(size=11),
-            ),
-            showlegend=False,
-            hovermode="y",
-            margin=dict(l=200, r=20, t=50, b=40),
-            height=700,
-        )
-    )
-    return fig
-
-
-def build_area_trend_fig(area_label: str) -> go.Figure:
-    """Línea temporal de la mediana de nota normalizada para un área específica."""
-    data = (
-        df_notas[df_notas["area_label"] == area_label]
-        .groupby("año_concurso")["nota_norm"]
-        .agg(
-            mediana="median",
-            q1=lambda x: x.quantile(0.25),
-            q3=lambda x: x.quantile(0.75),
-            n="count",
-        )
-        .reset_index()
+    transition_df = pd.DataFrame(transitions, columns=["source", "target"])
+    counts = (
+        transition_df.groupby(["source", "target"]).size().reset_index(name="value")
     )
 
-    color = _bump_area_color.get(area_label, ACCENT)
-    historical_median = df_notas[df_notas["area_label"] == area_label]["nota_norm"].median()
+    # Filter for top transitions to keep Sankey readable
+    counts = counts.sort_values("value", ascending=False).head(40)
 
-    fig = go.Figure()
+    all_nodes = list(pd.concat([counts["source"], counts["target"]]).unique())
+    node_map = {node: i for i, node in enumerate(all_nodes)}
 
-    # Banda IQR
-    fig.add_trace(
-        go.Scatter(
-            x=pd.concat([data["año_concurso"], data["año_concurso"].iloc[::-1]]),
-            y=pd.concat([data["q3"], data["q1"].iloc[::-1]]),
-            fill="toself",
-            fillcolor=color,
-            line=dict(color="rgba(0,0,0,0)"),
-            opacity=0.15,
-            hoverinfo="skip",
-            showlegend=False,
-            name="IQR",
-        )
-    )
+    sources = counts["source"].map(node_map).tolist()
+    targets = counts["target"].map(node_map).tolist()
+    values = counts["value"].tolist()
 
-    # Línea de mediana
-    fig.add_trace(
-        go.Scatter(
-            x=data["año_concurso"],
-            y=data["mediana"],
-            mode="lines+markers",
-            line=dict(color=color, width=2.5),
-            marker=dict(size=8, color=color),
-            name="Mediana",
-            hovertemplate=(
-                "Año: %{x}<br>"
-                "Mediana: %{y:.3f}<br>"
-                "n = %{customdata} proyectos<extra></extra>"
-            ),
-            customdata=data["n"].values,
-        )
-    )
-    
-    # Línea de referencia histórica (todos los años)
-    fig.add_hline(
-        y=historical_median,
-        line_dash="dot",
-        line_color=TEXT_SECONDARY,
-        annotation_text="Mediana histórica",
-        annotation_position="bottom right",
-    )
-
-    fig.update_layout(
-        **_base_layout(
-            title=dict(
-                text=f"Evolución de la nota — {area_label}",
-                font=dict(size=13),
-                x=0.5,
-            ),
-            xaxis=dict(
-                tickmode="array",
-                tickvals=YEARS,
-                showgrid=False,
-            ),
-            yaxis=dict(
-                title="Nota (escala 1–7)",
-                showgrid=True,
-                gridcolor=GRID_COLOR,
-                range=[3.8, 5.4],
-            ),
-            showlegend=False,
-            hovermode="x unified",
-            margin=dict(l=50, r=20, t=50, b=40),
-            height=260,
-        )
-    )
-    return fig
+    return all_nodes, sources, targets, values
 
 
-# ---------------------------------------------------------------------------
-# Construcción de figuras originales (Hegemonía y Bump)
-# ---------------------------------------------------------------------------
+def get_area_collaboration_data(df):
+    # Link areas if they share a researcher
+    researcher_areas = df.groupby("nombre_completo")["area_estudio"].unique()
+
+    links = []
+    for areas in researcher_areas:
+        if len(areas) > 1:
+            areas = sorted(list(areas))
+            for i in range(len(areas)):
+                for j in range(i + 1, len(areas)):
+                    links.append((areas[i], areas[j]))
+
+    links_df = pd.DataFrame(links, columns=["area1", "area2"])
+    matrix = links_df.groupby(["area1", "area2"]).size().reset_index(name="count")
+
+    # Pivot to create a matrix
+    areas = sorted(df["area_estudio"].unique())
+    adj_matrix = pd.DataFrame(0, index=areas, columns=areas)
+
+    for _, row in matrix.iterrows():
+        adj_matrix.loc[row["area1"], row["area2"]] = row["count"]
+        adj_matrix.loc[row["area2"], row["area1"]] = row["count"]
+
+    return adj_matrix
 
 
-def build_hegemony_fig() -> go.Figure:
-    """Área apilada normalizada (100%) de proyectos por institución y año."""
-    fig = go.Figure()
+def get_postdoc_transition_data(df):
+    # Identify researchers who were POSTDOCTORADO
+    postdocs = df[df["instrumento"] == "POSTDOCTORADO"]["nombre_completo"].unique()
 
-    for inst_short in _order_short:
-        subset = df_hegemony[df_hegemony["inst_short"] == inst_short].sort_values(
+    transitions = []
+    for name in postdocs:
+        researcher_data = df[df["nombre_completo"] == name].sort_values("año_concurso")
+        postdoc_years = researcher_data[
+            researcher_data["instrumento"] == "POSTDOCTORADO"
+        ]["año_concurso"].tolist()
+        pi_years = researcher_data[researcher_data["calidad"] == "INVEST. RESPONSABLE"][
             "año_concurso"
-        )
-        if subset.empty:
-            continue
-        color = _inst_colors.get(inst_short, "#ced4da")
-        fig.add_trace(
-            go.Scatter(
-                x=subset["año_concurso"],
-                y=subset["pct"],
-                name=inst_short,
-                mode="lines",
-                stackgroup="one",
-                groupnorm="percent",
-                line=dict(width=0.5, color=color),
-                fillcolor=color,
-                hovertemplate=(
-                    "<b>%{fullData.name}</b><br>"
-                    "Año: %{x}<br>"
-                    "Participación: %{y:.1f}%<extra></extra>"
-                ),
-            )
-        )
+        ].tolist()
 
-    fig.update_layout(
-        **_base_layout(
-            yaxis=dict(
-                title="Participación (%)",
-                ticksuffix="%",
-                showgrid=True,
-                gridcolor=GRID_COLOR,
-                range=[0, 100],
-            ),
-            xaxis=dict(
-                title="Año de concurso",
-                tickmode="array",
-                tickvals=YEARS,
-                showgrid=False,
-            ),
-            hovermode="x unified",
-            legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.15,
-                xanchor="center",
-                x=0.5,
-                font=dict(size=11),
-                traceorder="reversed",
-            ),
-        )
+        # We look for the first PI role after the first Postdoc role
+        if postdoc_years and pi_years:
+            first_postdoc = min(postdoc_years)
+            future_pi = [y for y in pi_years if y > first_postdoc]
+            if future_pi:
+                first_pi = min(future_pi)
+                transitions.append((f"Postdoc ({first_postdoc})", f"PI ({first_pi})"))
+            else:
+                transitions.append((f"Postdoc ({first_postdoc})", "Solo Postdoc"))
+        elif postdoc_years:
+            first_postdoc = min(postdoc_years)
+            transitions.append((f"Postdoc ({first_postdoc})", "Solo Postdoc"))
+
+    transition_df = pd.DataFrame(transitions, columns=["source", "target"])
+    counts = (
+        transition_df.groupby(["source", "target"]).size().reset_index(name="value")
     )
-    return fig
 
+    all_nodes = sorted(list(pd.concat([counts["source"], counts["target"]]).unique()))
+    node_map = {node: i for i, node in enumerate(all_nodes)}
 
-def build_bump_fig(selected_area: str | None = None) -> go.Figure:
-    """Bump chart: ranking de áreas por año.
+    sources = counts["source"].map(node_map).tolist()
+    targets = counts["target"].map(node_map).tolist()
+    values = counts["value"].tolist()
 
-    Args:
-        selected_area: etiqueta del área a resaltar. Si es None se aplica el
-                       resaltado por defecto (áreas con mayor movimiento).
-    """
-    fig = go.Figure()
-
-    for area_label in _bump_areas_labels:
-        subset = df_bump[df_bump["area_label"] == area_label].sort_values(
-            "año_concurso"
-        )
-        color = _bump_area_color[area_label]
-
-        if selected_area is None:
-            # Comportamiento por defecto: resaltar las de mayor movimiento
-            is_active = area_label in _BUMP_HIGHLIGHTED
-        else:
-            is_active = area_label == selected_area
-
-        opacity = 1.0 if is_active else 0.15
-        width = 3 if is_active else 1.0
-        marker_size = 9 if is_active else 5
-
-        fig.add_trace(
-            go.Scatter(
-                x=subset["año_concurso"],
-                y=subset["rank"],
-                name=area_label,
-                mode="lines+markers",
-                line=dict(color=color, width=width),
-                marker=dict(size=marker_size, color=color),
-                opacity=opacity,
-                hovertemplate=(
-                    f"<b>{area_label}</b><br>"
-                    "Año: %{x}<br>"
-                    "Ranking: #%{y}<br>"
-                    "Proyectos: %{customdata}<extra></extra>"
-                ),
-                customdata=subset["n_proyectos"].values,
-            )
-        )
-
-        # Etiqueta al final (año 2019) solo para el área activa
-        if is_active:
-            last = subset[subset["año_concurso"] == 2019]
-            if not last.empty:
-                fig.add_annotation(
-                    x=2019,
-                    y=last["rank"].values[0],
-                    text=f"  {area_label}",
-                    showarrow=False,
-                    xanchor="left",
-                    font=dict(size=11, color=color, family=FONT_FAMILY),
-                )
-
-    fig.update_layout(
-        **_base_layout(
-            yaxis=dict(
-                title="Posición en el ranking",
-                autorange="reversed",
-                tickmode="linear",
-                tick0=1,
-                dtick=1,
-                showgrid=True,
-                gridcolor=GRID_COLOR,
-                range=[0.5, 14],
-            ),
-            xaxis=dict(
-                title="Año de concurso",
-                tickmode="array",
-                tickvals=YEARS,
-                showgrid=False,
-                range=[2011.5, 2020.5],
-            ),
-            showlegend=False,
-            hovermode="closest",
-            margin=dict(l=20, r=200, t=50, b=20),
-        )
-    )
-    return fig
+    return all_nodes, sources, targets, values
 
 
 # ---------------------------------------------------------------------------
-# Layout
+# Helpers de layout (estilo Página 2)
 # ---------------------------------------------------------------------------
 
 
@@ -582,7 +133,7 @@ def _section_header(
     title: str,
     subtitle: str,
     story: str,
-    badge_text: str | None = None,
+    badge_text=None,
 ) -> dbc.Row:
     """Encabezado narrativo reutilizable para cada sección."""
     badge = (
@@ -614,19 +165,17 @@ def _section_header(
 
 layout = html.Div(
     [
-        # ── Encabezado de página ──────────────────────────────────────────
+        # ── Encabezado de página (estilo Página 2) ────────────────────────
         dbc.Row(
             [
                 dbc.Col(
                     [
                         html.H2(
-                            "¿Cómo cambió la ciencia chilena entre 2012 y 2019?",
+                            "Trayectorias e Investigadores",
                             className="fw-bold mb-1",
                         ),
                         html.P(
-                            "Ocho años de concursos Fondecyt revelan patrones que van más allá de los números: "
-                            "quién concentra el poder, qué disciplinas ganan terreno y cómo se evalúa la calidad "
-                            "de la investigación en Chile.",
+                            "Análisis de la movilidad institucional, colaboración interdisciplinaria y evolución de carrera de los investigadores Fondecyt.",
                             className="text-secondary fs-5 mb-0",
                             style={"maxWidth": "860px"},
                         ),
@@ -637,53 +186,17 @@ layout = html.Div(
             className="mt-4 mb-4 pb-3 border-bottom border-2 border-primary",
         ),
         # ══════════════════════════════════════════════════════════════════
-        # SECCIÓN 1 — Hegemonía institucional
+        # SECCIÓN 1 — Movilidad Institucional
         # ══════════════════════════════════════════════════════════════════
         _section_header(
-            title="El duopolio que no cede",
-            subtitle="Participación de cada universidad en el total de proyectos adjudicados por año",
+            title="Movilidad Institucional de Investigadores",
+            subtitle="Flujo de investigadores entre instituciones",
             story=(
-                "La Universidad de Chile y la PUC concentraron más del 50% de todos los proyectos "
-                "Fondecyt durante los ocho años analizados. En 2012 esa cifra llegó al 60%. "
-                "Aunque la tendencia muestra una leve apertura hacia 2017–2018, el sistema sigue "
-                "siendo profundamente asimétrico: el 90% de las universidades del país compite "
-                "por el 40% restante del financiamiento."
+                "¿Quiénes son los 'conectores' del sistema? Este análisis sigue el flujo de investigadores "
+                "que han trabajado en más de una institución a lo largo de su carrera. Puedes filtrar "
+                "por área de estudio para observar patrones específicos de movilidad disciplinaria."
             ),
             badge_text="01",
-        ),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Card(
-                        dbc.CardBody(
-                            dcc.Graph(
-                                id="hegemony-chart",
-                                figure=build_hegemony_fig(),
-                                config={"displayModeBar": False},
-                                style={"height": "420px"},
-                            )
-                        ),
-                        className="shadow-sm border-0",
-                    ),
-                    width=12,
-                )
-            ],
-            className="mb-5",
-        ),
-        # ══════════════════════════════════════════════════════════════════
-        # SECCIÓN 2 — Bump chart de áreas
-        # ══════════════════════════════════════════════════════════════════
-        _section_header(
-            title="Disciplinas que suben, disciplinas que caen",
-            subtitle="Ranking anual de áreas de estudio según número de proyectos adjudicados",
-            story=(
-                "No todas las disciplinas corrieron la misma suerte. Las Ciencias Jurídicas y Políticas "
-                "pasaron del puesto 7 in 2012 al liderazgo absoluto en 2019, mientras que Biología 2 "
-                "cayó del top-5 al puesto 17 en el mismo período. Astronomía y Cosmología protagonizó "
-                "el ascenso más espectacular: del puesto 19 al 6. "
-                "Las líneas resaltadas marcan las trayectorias con mayor movimiento."
-            ),
-            badge_text="02",
         ),
         dbc.Row(
             [
@@ -696,25 +209,20 @@ layout = html.Div(
                                         dbc.Col(
                                             [
                                                 html.Label(
-                                                    "Selecciona un área para resaltar:",
+                                                    "Filtrar por área de estudio:",
                                                     className="small text-muted mb-1",
                                                 ),
                                                 dcc.Dropdown(
-                                                    id="bump-area-dropdown",
+                                                    id="mobility-area-filter",
                                                     options=[
-                                                        {
-                                                            "label": "Resaltar recomendados",
-                                                            "value": "none",
-                                                        }
-                                                    ]
-                                                    + [
-                                                        {"label": a, "value": a}
-                                                        for a in sorted(
-                                                            _bump_areas_labels
+                                                        {"label": area, "value": area}
+                                                        for area in sorted(
+                                                            df["area_estudio"].unique()
                                                         )
                                                     ],
-                                                    value="none",
-                                                    clearable=False,
+                                                    placeholder="Todas las áreas",
+                                                    multi=False,
+                                                    clearable=True,
                                                     className="shadow-sm",
                                                 ),
                                             ],
@@ -725,11 +233,12 @@ layout = html.Div(
                                         )
                                     ]
                                 ),
-                                dcc.Graph(
-                                    id="bump-chart",
-                                    figure=build_bump_fig(),
-                                    config={"displayModeBar": False},
-                                    style={"height": "500px"},
+                                dbc.Spinner(
+                                    dcc.Graph(
+                                        id="sankey-mobility",
+                                        config={"displayModeBar": False},
+                                    ),
+                                    color="info",
                                 ),
                             ]
                         ),
@@ -741,255 +250,174 @@ layout = html.Div(
             className="mb-5",
         ),
         # ══════════════════════════════════════════════════════════════════
-        # SECCIÓN 3 — Distribución de notas
+        # SECCIÓN 2 — Colaboración entre Áreas
         # ══════════════════════════════════════════════════════════════════
         _section_header(
-            title="¿Todas las disciplinas son evaluadas igual?",
-            subtitle=(
-                "Distribución de la nota de evaluación por área de estudio "
-                "(escala 1–7, nota normalizada; se excluye 'Química' por muestra insuficiente)"
-            ),
+            title="Red de Colaboración entre Áreas",
+            subtitle="Intensidad de investigadores compartidos entre disciplinas",
             story=(
-                "La nota de un proyecto Fondecyt no es solo un número: es el veredicto de pares "
-                "que decide qué investigación merece financiamiento. Matemáticas lidera con la "
-                "mediana más alta (4.76) y la menor dispersión, lo que sugiere consenso evaluativo. "
-                "En el extremo opuesto, Medicina G1 tiene la mediana más baja (4.29) y una cola "
-                "larga hacia abajo. La línea central de cada caja es la mediana; el rombo, el promedio. "
-                "Cuando ambos se separan, hay proyectos muy bien o muy mal evaluados que distorsionan el promedio."
+                "¿Qué áreas de conocimiento colaboran entre sí? Este mapa revela qué disciplinas están "
+                "más conectadas a través de sus investigadores. Los puentes entre clusters identifican "
+                "actores estratégicos para la política científica nacional."
+            ),
+            badge_text="02",
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        dbc.CardBody(
+                            dbc.Spinner(
+                                dcc.Graph(
+                                    id="heatmap-areas", config={"displayModeBar": False}
+                                ),
+                                color="info",
+                            )
+                        ),
+                        className="shadow-sm border-0",
+                    ),
+                    width=12,
+                )
+            ],
+            className="mb-5",
+        ),
+        # ══════════════════════════════════════════════════════════════════
+        # SECCIÓN 3 — Postdoc -> PI
+        # ══════════════════════════════════════════════════════════════════
+        _section_header(
+            title="El Efecto POSTDOCTORADO: ¿Trampolín o callejón sin salida?",
+            subtitle="Trayectoria desde Postdoctorado hasta Investigador Responsable (PI)",
+            story=(
+                "El seguimiento de cohortes mide la efectividad de los proyectos de postdoctorado. "
+                "¿Logran estos investigadores reaparecer como investigadores responsables en años posteriores? "
+                "Este flujo temporal muestra la transición de carrera dentro del sistema Fondecyt."
             ),
             badge_text="03",
         ),
         dbc.Row(
             [
                 dbc.Col(
-                    [
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.CardBody(
-                                            [
-                                                html.H2(
-                                                    "---",
-                                                    id="stat-max-val",
-                                                    className="fw-bold mb-0",
-                                                    style={"color": ACCENT},
-                                                ),
-                                                html.P(
-                                                    "N/A",
-                                                    id="stat-max-label",
-                                                    className="text-secondary mb-0 small",
-                                                ),
-                                                html.P(
-                                                    "Mediana más alta",
-                                                    className="fw-semibold mb-0",
-                                                ),
-                                            ]
-                                        ),
-                                        className="shadow-sm border-0 text-center h-100",
-                                    ),
-                                    width=4,
+                    dbc.Card(
+                        dbc.CardBody(
+                            dbc.Spinner(
+                                dcc.Graph(
+                                    id="sankey-postdoc",
+                                    config={"displayModeBar": False},
                                 ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.CardBody(
-                                            [
-                                                html.H2(
-                                                    "---",
-                                                    id="stat-min-val",
-                                                    className="fw-bold mb-0",
-                                                    style={"color": "#e07b54"},
-                                                ),
-                                                html.P(
-                                                    "N/A",
-                                                    id="stat-min-label",
-                                                    className="text-secondary mb-0 small",
-                                                ),
-                                                html.P(
-                                                    "Mediana más baja",
-                                                    className="fw-semibold mb-0",
-                                                ),
-                                            ]
-                                        ),
-                                        className="shadow-sm border-0 text-center h-100",
-                                    ),
-                                    width=4,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.CardBody(
-                                            [
-                                                html.H2(
-                                                    "---",
-                                                    id="stat-diff-val",
-                                                    className="fw-bold mb-0",
-                                                    style={"color": "#6c757d"},
-                                                ),
-                                                html.P(
-                                                    "Brecha máx–mín",
-                                                    className="text-secondary mb-0 small",
-                                                ),
-                                                html.P(
-                                                    "Diferencia entre áreas",
-                                                    className="fw-semibold mb-0",
-                                                ),
-                                            ]
-                                        ),
-                                        className="shadow-sm border-0 text-center h-100",
-                                    ),
-                                    width=4,
-                                ),
-                            ],
-                            className="mb-3 g-3",
+                                color="info",
+                            )
                         ),
-                        dbc.Card(
-                            dbc.CardBody(
-                                [
-                                    # Fila del Slider - Ancho completo
-                                    dbc.Row(
-                                        [
-                                            dbc.Col(
-                                                [
-                                                    html.Label("Filtrar por año de concurso:", className="small text-muted mb-1"),
-                                                    dcc.Slider(
-                                                        id="year-slider",
-                                                        min=2011,
-                                                        max=2019,
-                                                        step=1,
-                                                        value=2011,
-                                                        marks={
-                                                            2011: {"label": "Todos", "style": {"fontWeight": "bold", "color": ACCENT}},
-                                                            **{y: str(y) for y in YEARS}
-                                                        },
-                                                        included=False,
-                                                        className="mt-2",
-                                                    ),
-                                                ],
-                                                width=12,
-                                                className="mb-4",
-                                            )
-                                        ]
-                                    ),
-                                    # Fila del Gráfico de Notas - Ancho completo
-                                    dbc.Row(
-                                        [
-                                            dbc.Col(
-                                                dcc.Graph(
-                                                    id="notas-chart",
-                                                    figure=build_notas_fig(None),
-                                                    config={"displayModeBar": False},
-                                                ),
-                                                width=12,
-                                            ),
-                                        ]
-                                    ),
-                                    # Fila de detalle (Evolución) - Ancho completo abajo
-                                    dbc.Row(
-                                        [
-                                            dbc.Col(
-                                                html.Div(
-                                                    id="area-trend-container",
-                                                    children=[
-                                                        html.Div(
-                                                            [
-                                                                html.I(className="bi bi-cursor-fill me-2"),
-                                                                "Haz clic en una caja del gráfico superior para ver la evolución histórica del área"
-                                                            ],
-                                                            className="text-muted text-center py-4 border rounded bg-light small",
-                                                        )
-                                                    ]
-                                                ),
-                                                width=12,
-                                                className="mt-4",
-                                            )
-                                        ]
-                                    ),
-                                ]
-                            ),
-                            className="shadow-sm border-0",
-                        ),
-                    ],
-                    width=12,
-                )
-            ],
-            className="mb-5",
-        ),
-        # ── Nota metodológica ─────────────────────────────────────────────
-        dbc.Row(
-            [
-                dbc.Col(
-                    html.P(
-                        [
-                            html.I(className="bi bi-info-circle me-1"),
-                            "Nota metodológica: los datos corresponden a proyectos Fondecyt Regular, "
-                            "Iniciación y Postdoctorado adjudicados entre 2012 y 2019. "
-                            "La nota de 2012 fue normalizada a escala 1–7 (originalmente en escala 0–100). "
-                            "Cada proyecto se cuenta una sola vez, independientemente del número de investigadores.",
-                        ],
-                        className="text-muted small fst-italic",
+                        className="shadow-sm border-0",
                     ),
                     width=12,
                 )
             ],
-            className="mt-2 mb-4 pt-3 border-top",
+            className="mb-5",
         ),
     ],
     className="px-3",
 )
 
 
-# ---------------------------------------------------------------------------
-# Callbacks
-# ---------------------------------------------------------------------------
+@callback(Output("sankey-mobility", "figure"), Input("mobility-area-filter", "value"))
+def update_sankey_mobility(selected_area):
+    filtered_df = df
+    if selected_area:
+        # Get researchers who worked in this area
+        researchers_in_area = df[df["area_estudio"] == selected_area][
+            "nombre_completo"
+        ].unique()
+        filtered_df = df[df["nombre_completo"].isin(researchers_in_area)]
 
+    nodes, sources, targets, values = get_mobility_data(filtered_df)
 
-@callback(
-    Output("bump-chart", "figure"),
-    Input("bump-area-dropdown", "value"),
-)
-def update_bump_chart(selected_area: str):
-    """Actualiza el bump chart resaltando el área seleccionada."""
-    area = None if selected_area == "none" else selected_area
-    return build_bump_fig(selected_area=area)
+    if not nodes:
+        return go.Figure().update_layout(
+            title="No hay datos de movilidad para este filtro"
+        )
 
-
-@callback(
-    [
-        Output("notas-chart", "figure"),
-        Output("stat-max-val", "children"),
-        Output("stat-max-label", "children"),
-        Output("stat-min-val", "children"),
-        Output("stat-min-label", "children"),
-        Output("stat-diff-val", "children"),
-    ],
-    Input("year-slider", "value"),
-)
-def update_notas_section(selected_year: int):
-    """Filtra el box plot de notas y actualiza las tarjetas de estadísticas."""
-    year = None if selected_year == 2011 else selected_year
-    fig = build_notas_fig(year=year)
-    max_v, max_l, min_v, min_l, diff = get_notas_stats(year=year)
-    return fig, max_v, max_l, min_v, min_l, diff
-
-
-@callback(
-    Output("area-trend-container", "children"),
-    Input("notas-chart", "clickData"),
-    prevent_initial_call=True,
-)
-def display_area_trend(clickData):
-    """Muestra la evolución temporal de la nota al hacer clic en una área del box plot."""
-    if not clickData:
-        return no_update
-
-    # Obtener el nombre del área desde clickData
-    try:
-        area_label = clickData["points"][0]["y"]
-    except (KeyError, IndexError):
-        return no_update
-
-    return dcc.Graph(
-        id="area-trend-chart",
-        figure=build_area_trend_fig(area_label),
-        config={"displayModeBar": False},
+    fig = go.Figure(
+        data=[
+            go.Sankey(
+                node=dict(
+                    pad=15,
+                    thickness=20,
+                    line=dict(color="black", width=0.5),
+                    label=[n[:35] + "..." if len(n) > 35 else n for n in nodes],
+                    color="rgba(51, 148, 213, 0.8)",
+                ),
+                link=dict(
+                    source=sources,
+                    target=targets,
+                    value=values,
+                    color="rgba(145, 161, 162, 0.4)",
+                ),
+            )
+        ]
     )
+
+    fig.update_layout(
+        font=dict(family="Open Sans, Arial, sans-serif", color="#2c3e50"),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        title_text=f"Flujo de Investigadores entre Instituciones {f' - {selected_area}' if selected_area else ''}",
+        font_size=10,
+        height=700,
+    )
+    return fig
+
+
+@callback(Output("heatmap-areas", "figure"), Input("heatmap-areas", "id"))
+def update_heatmap_areas(_):
+    adj_matrix = get_area_collaboration_data(df)
+
+    fig = px.imshow(
+        adj_matrix,
+        labels=dict(x="Área 1", y="Área 2", color="Investigadores compartidos"),
+        x=adj_matrix.columns,
+        y=adj_matrix.index,
+        color_continuous_scale="Blues",
+    )
+    fig.update_layout(
+        font=dict(family="Open Sans, Arial, sans-serif", color="#2c3e50"),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        title_text="Matriz de Adyacencia entre Áreas de Estudio",
+        height=800,
+    )
+    return fig
+
+
+@callback(Output("sankey-postdoc", "figure"), Input("sankey-postdoc", "id"))
+def update_sankey_postdoc(_):
+    nodes, sources, targets, values = get_postdoc_transition_data(df)
+
+    fig = go.Figure(
+        data=[
+            go.Sankey(
+                node=dict(
+                    pad=15,
+                    thickness=20,
+                    line=dict(color="black", width=0.5),
+                    label=nodes,
+                    color="rgba(40, 167, 69, 0.8)",
+                ),
+                link=dict(
+                    source=sources,
+                    target=targets,
+                    value=values,
+                    color="rgba(40, 167, 69, 0.2)",
+                ),
+            )
+        ]
+    )
+
+    fig.update_layout(
+        font=dict(family="Open Sans, Arial, sans-serif", color="#2c3e50"),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        title_text="Trayectoria: Postdoc -> Investigador Responsable (PI)",
+        font_size=10,
+        height=600,
+    )
+    return fig
