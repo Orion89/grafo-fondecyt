@@ -140,6 +140,39 @@ layout = html.Div(
         ),
         dbc.Row(
             [
+                # Columna Izquierda: Storytelling de los Datos (Ancho 2)
+                dbc.Col(
+                    dbc.Card(
+                        dbc.CardBody(
+                            [
+                                html.H5(
+                                    [
+                                        html.I(className="bi bi-database me-2 text-primary"),
+                                        "La Huella Científica de Chile",
+                                    ],
+                                    className="fw-bold mb-3 text-primary",
+                                    style={"fontSize": "1.1rem"},
+                                ),
+                                html.P(
+                                    "Este visualizador se nutre de un registro histórico que documenta el latido de la ciencia nacional: "
+                                    "miles de proyectos FONDECYT adjudicados entre 2012 y 2019. Cada registro captura no solo los "
+                                    "nombres de los investigadores que lideran el conocimiento, sino también sus áreas de estudio "
+                                    "(desde física y biología hasta historia y sociología), las notas de evaluación académica obtenidas, "
+                                    "y los instrumentos de financiamiento público (Iniciación, Regular o Postdoctorado) que viabilizan sus ideas. "
+                                    "Es la radiografía de cómo se distribuyen y florecen los recursos de investigación a lo largo del país.",
+                                    className="text-muted lh-base mb-0",
+                                    style={"fontSize": "0.85rem", "textAlign": "justify"},
+                                ),
+                            ],
+                            className="p-3",
+                        ),
+                        className="shadow-sm border-0 border-start border-primary border-4 h-100",
+                        style={"backgroundColor": "#f8f9fa"},
+                    ),
+                    width=2,
+                    class_name="mb-1 d-flex align-items-stretch",
+                ),
+                # Columna Central: El Grafo (Ancho 8)
                 dbc.Col(
                     [
                         dbc.Spinner(
@@ -150,11 +183,42 @@ layout = html.Div(
                             color="info",
                         )
                     ],
-                    width=12,
+                    width=8,
                     class_name="mb-1",
-                )
+                ),
+                # Columna Derecha: Construcción del Grafo (Ancho 2)
+                dbc.Col(
+                    dbc.Card(
+                        dbc.CardBody(
+                            [
+                                html.H5(
+                                    [
+                                        html.I(className="bi bi-diagram-3 me-2 text-info"),
+                                        "Anatomía de la Red",
+                                    ],
+                                    className="fw-bold mb-3 text-info",
+                                    style={"fontSize": "1.1rem"},
+                                ),
+                                html.P(
+                                    "Para dar sentido a miles de registros, la aplicación mapea dinámicamente cada dato a una estructura relacional. "
+                                    "Las universidades, los proyectos, los años, las disciplinas académicas y los propios investigadores se transforman en nodos interconectados. "
+                                    "Las líneas (o aristas) revelan relaciones clave, como qué científico participa en qué proyecto o qué institución lo patrocina. "
+                                    "Finalmente, mediante un algoritmo de fuerzas físicas, los nodos se ordenan y repelen de forma automática en pantalla, "
+                                    "revelando clústeres espontáneos que exponen la densidad de la colaboración y las sinergias institucionales.",
+                                    className="text-muted lh-base mb-0",
+                                    style={"fontSize": "0.85rem", "textAlign": "justify"},
+                                ),
+                            ],
+                            className="p-3",
+                        ),
+                        className="shadow-sm border-0 border-start border-info border-4 h-100",
+                        style={"backgroundColor": "#f8f9fa"},
+                    ),
+                    width=2,
+                    class_name="mb-1 d-flex align-items-stretch",
+                ),
             ],
-            class_name="mb-3 mt-1",
+            class_name="mb-3 mt-1 g-3",
         ),
         dbc.Row(
             [
