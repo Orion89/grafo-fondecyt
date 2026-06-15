@@ -20,7 +20,8 @@ dash.register_page(
     description="Grafo de conocimiento de proyectos Fondecyt: Visualiza investigadores, proyectos, áreas de estudio y universidades.",
 )
 
-df = pd.read_csv("./data/proyectos_fondecyt_2012-2019.csv")
+df = pd.read_csv("./data/proyectos_fondecyt_2012-2025.csv")
+df_graph = df[df["año_concurso"] <= 2019].copy()
 
 
 def _section_header(
@@ -82,7 +83,7 @@ layout = html.Div(
                         ),
                         html.P(
                             [
-                                "Entre 2012 y 2019, Chile tejió una red de conocimiento sin precedentes a través de miles de adjudicaciones FONDECYT. "
+                                "Entre 2012 y 2025, Chile tejió una red de conocimiento sin precedentes a través de miles de adjudicaciones FONDECYT. "
                                 "Este proyecto es la ",
                                 html.B("huella digital del progreso científico nacional"),
                                 ". Te invitamos a navegar por este ecosistema interactivo para mapear la colaboración, rastrear el talento e identificar las tendencias que lideran la agenda científica.",
@@ -155,11 +156,11 @@ layout = html.Div(
                                 ),
                                 html.P(
                                     "Este visualizador se nutre de un registro histórico que documenta el latido de la ciencia nacional: "
-                                    "miles de proyectos FONDECYT adjudicados entre 2012 y 2019. Cada registro captura no solo los "
-                                    "nombres de los investigadores que lideran el conocimiento, sino también sus áreas de estudio "
-                                    "(desde física y biología hasta historia y sociología), las notas de evaluación académica obtenidas, "
-                                    "y los instrumentos de financiamiento público (Iniciación, Regular o Postdoctorado) que viabilizan sus ideas. "
-                                    "Es la radiografía de cómo se distribuyen y florecen los recursos de investigación a lo largo del país.",
+                                    "miles de proyectos FONDECYT adjudicados entre 2012 y 2019. Debido a particularidades en el registro de "
+                                    "coinvestigaciones en los datos más recientes (2020-2025), esta vista interactiva de red de colaboración se "
+                                    "focaliza en dicho período, mientras que los análisis agregados de esta página cubren la serie completa hasta 2025. "
+                                    "Cada registro captura los nombres de los investigadores, sus áreas de estudio, las notas de evaluación "
+                                    "y los instrumentos de financiamiento público (Iniciación, Regular o Postdoctorado) que viabilizan sus ideas.",
                                     className="text-muted lh-base mb-0",
                                     style={"fontSize": "0.85rem", "textAlign": "justify"},
                                 ),
@@ -243,14 +244,14 @@ layout = html.Div(
                 dbc.Col(
                     [
                         dcc.Slider(
-                            min=int(df["año_concurso"].min()),
-                            max=int(df["año_concurso"].max()),
+                            min=int(df_graph["año_concurso"].min()),
+                            max=int(df_graph["año_concurso"].max()),
                             step=None,
                             value=2019,
                             included=False,
                             marks={
                                 int(year): str(year)
-                                for year in df["año_concurso"].unique()
+                                for year in sorted(df_graph["año_concurso"].unique())
                             },
                             id="slider-1",
                         )
@@ -270,9 +271,9 @@ layout = html.Div(
             subtitle="¿Qué frentes del conocimiento lideran la agenda institucional?",
             story=(
                 "No todas las instituciones apuestan por los mismos frentes del conocimiento. "
-                "Este mapa de rectángulos revela el ecosistema de prioridades de la universidad: "
-                "el tamaño de cada bloque es proporcional al número de proyectos adjudicados en cada disciplina. "
-                "Es, en esencia, la huella digital del impacto científico de la institución."
+                "Este mapa de rectángulos revela el ecosistema acumulado de prioridades de la universidad entre 2012 y 2025: "
+                "el tamaño de cada bloque es proporcional al número de proyectos únicos adjudicados en cada disciplina. "
+                "Es, en esencia, la huella digital a largo plazo del impacto y especialización científica de la institución."
             ),
             badge_text="02",
             title_id="title-treemap-1",
@@ -302,9 +303,9 @@ layout = html.Div(
             title="Proporción por tipo de proyecto",
             subtitle="¿Cómo se distribuye la inversión entre investigadores nóveles y consolidados?",
             story=(
-                "El equilibrio entre los distintos instrumentos de financiamiento habla de la madurez "
-                "y renovación del cuerpo académico. Los proyectos Regulares consolidan líneas de investigación, "
-                "mientras que Iniciación y Postdoctorado son el motor de renovación y atracción de nuevos talentos."
+                "El equilibrio entre los distintos instrumentos de financiamiento en el período 2012-2025 habla de la madurez "
+                "y renovación del cuerpo académico de la institución. Los proyectos Regulares consolidan líneas de investigación "
+                "consolidadas, mientras que Iniciación y Postdoctorado actúan como el motor de renovación y atracción de nuevos talentos."
             ),
             badge_text="03",
         ),
@@ -338,7 +339,7 @@ layout = html.Div(
 )
 def create_network(u_name, year):
     G_data = filter_kgraph_nx_to_pyvis(
-        df=df, year=year, university=u_name, k_layout=0.4
+        df=df_graph, year=year, university=u_name, k_layout=0.4
     )
     network = DashNetwork(
         id="g_fondecyt",
@@ -357,8 +358,11 @@ def create_network(u_name, year):
     Input("dropdown-1", "value"),
 )
 def update_treemap_1(u_name):
+    # Filtramos por universidad y eliminamos proyectos duplicados para contar proyectos únicos
+    df_univ = df[df.institucion_patrocinante == u_name]
+    df_unique_proj = df_univ.drop_duplicates("folioproy")
     df_filtered = (
-        df[df.institucion_patrocinante == u_name]["area_estudio"]
+        df_unique_proj["area_estudio"]
         .value_counts()
         .to_frame()
         .reset_index()
@@ -390,8 +394,11 @@ def update_treemap_1(u_name):
 
 @callback(Output("donut-1", "figure"), Input("dropdown-1", "value"))
 def update_donut_1(u_name):
+    # Filtramos por universidad y eliminamos proyectos duplicados para contar proyectos únicos
+    df_univ = df[df.institucion_patrocinante == u_name]
+    df_unique_proj = df_univ.drop_duplicates("folioproy")
     df_filtered = (
-        df[df.institucion_patrocinante == u_name]["instrumento"]
+        df_unique_proj["instrumento"]
         .value_counts()
         .to_frame()
         .reset_index()
